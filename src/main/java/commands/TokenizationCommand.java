@@ -3,8 +3,11 @@ package commands;
 import core.Text;
 import core.TextManager;
 import core.Token;
+import tokenization.SmartTokenizer;
 import tokenization.TokenizationStrategy;
 import tokenization.CharTokenizer;
+import tokenization.WordTokenizer;
+
 import java.util.List;
 
 /**
@@ -66,11 +69,9 @@ public class TokenizationCommand implements Command {
             case "CHAR":
                 return new CharTokenizer();
             case "WORD":
-                // TODO: Implement WordTokenizer
-                throw new RuntimeException("WORD tokenization not yet implemented");
+                return new WordTokenizer();
             case "SMART":
-                // TODO: Implement SmartTokenizer
-                throw new RuntimeException("SMART tokenization not yet implemented");
+                return new SmartTokenizer();
             default:
                 return null;
         }

@@ -1,4 +1,31 @@
 package metrics;
 
-public class MatchSum {
+import matching.MatchResult;
+
+/**
+ * Match sum metric (LEN): total number of matching tokens.
+ *
+ * @author [Dein u-Kürzel]
+ */
+public class MatchSum implements SimilarityMetric {
+
+    @Override
+    public double calculate(MatchResult result) {
+        return result.getTotalMatchingTokens();
+    }
+
+    @Override
+    public String getName() {
+        return "LEN";
+    }
+
+    @Override
+    public boolean isPercentage() {
+        return false;
+    }
+
+    @Override
+    public String format(double value) {
+        return String.valueOf((int) value);
+    }
 }

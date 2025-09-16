@@ -1,4 +1,394 @@
 package commands;
 
-public class EditCommand {
+import core.AnalysisResult;
+import core.Match;
+import matching.MatchResult;
+import metrics.SimilarityMetric;
+import metrics.MetricFactory;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+/**
+ * Command to enter interactive edit mode for a text pair comparison.
+ * Usage: edit <id> <id>
+ *
+ * @author [Dein u-Kürzel]
+ */
+public class EditCommand implements Command {
+    private final AnalyzeCommand analyzeCommand;
+    private final Scanner scanner;
+
+    /**
+     * Creates a new EditCommand.
+     *
+     * @param analyzeCommand reference to analyze command for results
+     * @param scanner scanner for user input
+     */
+    public EditCommand(AnalyzeCommand analyzeCommand, Scanner scanner) {
+        this.analyzeCommand = analyzeCommand;
+        this.scanner = scanner;
+    }
+
+    @Override
+    public String execute(String[] args) throws CommandException {
+        if (args.length != 2) {
+            throw new CommandException("edit command requires exactly two arguments: edit <id> <id>");
+        }
+
+        String id1 = args[0];
+        String id2 = args[1];
+
+        // Get analysis results
+        AnalysisResult analysisResult = analyzeCommand.getLastAnalysisResult();
+        if (analysisResult == null) {
+            throw new CommandException("No analysis results available. Run analyze command first.");
+        }
+
+        // Find the match result for these two texts
+        MatchResult result = analysisResult.getResult(id1, id2);
+        if (result == null) {
+            throw new CommandException("No comparison found for texts '" + id1 + "' and '" + id2 + "'");
+        }
+
+        // Enter edit mode
+        enterEditMode(result);
+
+        return "OK, exit editing mode.";
+    }
+
+    /**
+     * Enters the interactive edit mode.
+     *
+     * @param result the match result to edit
+     */
+    private void enterEditMode(MatchResult result) {
+        List<Match> matches = new ArrayList<>(result.getMatches());
+        SimilarityMetric currentMetric = new metrics.SymmetricSimilarity(); // Default to AVG
+
+        // Print initial state
+        printEditState(result, matches, currentMetric);
+
+        while (true) {
+            System.out.print("> ");
+            String input = scanner.nextLine().trim();
+
+            if (input.isEmpty()) {
+                continue;
+            }
+
+            String[] parts = input.split("\\s+");
+            String command = parts[0].toLowerCase();
+
+            try {
+                if ("exit".equals(command)) {
+                    break;
+                } else if ("matches".equals(command)) {
+                    printMatches(matches);
+                } else if ("print".equals(command)) {
+                    handlePrintCommand(parts, matches, result);
+                } else if ("add".equals(command)) {
+                    handleAddCommand(parts, matches, result);
+                } else if ("discard".equals(command)) {
+                    handleDiscardCommand(parts, matches);
+                } else if ("extend".equals(command)) {
+                    handleExtendCommand(parts, matches, result);
+                } else if ("truncate".equals(command)) {
+                    handleTruncateCommand(parts, matches, result);
+                } else if ("set".equals(command)) {
+                    currentMetric = handleSetCommand(parts);
+                } else {
+                    System.out.println("ERROR: Unknown command in edit mode: " + command);
+                    continue;
+                }
+
+                // Print state after each command (except exit)
+                if (!"exit".equals(command)) {
+                    printEditState(result, matches, currentMetric);
+                }
+
+            } catch (Exception e) {
+                System.out.println("ERROR: " + e.getMessage());
+                printEditState(result, matches, currentMetric);
+            }
+        }
+    }
+
+    /**
+     * Prints the current edit state.
+     */
+    private void printEditState(MatchResult result, List<Match> matches, SimilarityMetric metric) {
+        // Calculate similarity with current matches
+        MatchResult tempResult = new MatchResult(
+                result.getText1(), result.getText2(),
+                result.getSequence1(), result.getSequence2(),
+                matches, result.getTokenizationStrategy(), result.getMinMatchLength()
+        );
+
+        double similarity = metric.calculate(tempResult);
+        String formattedSimilarity = metric.format(similarity);
+
+        System.out.println("Comparison of " + result.getText1().getIdentifier() +
+                ", " + result.getText2().getIdentifier() + ": " +
+                formattedSimilarity + " similarity, " + matches.size() +
+                " matches. Available commands: matches, print, add, extend, truncate, discard, set, exit.");
+    }
+
+    /**
+     * Prints all matches sorted by position in first text.
+     * Note: Match indices for commands are 1-based!
+     */
+    private void printMatches(List<Match> matches) {
+        // Sort matches by start position in first text (for edit mode display)
+        List<Match> sortedMatches = new ArrayList<>(matches);
+        sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
+
+        for (int i = 0; i < sortedMatches.size(); i++) {
+            Match match = sortedMatches.get(i);
+            System.out.println("Match of length " + match.getLength() + ": " +
+                    match.getStartPosSequence1() + "-" + match.getStartPosSequence2());
+        }
+    }
+
+    /**
+     * Gets a match by 1-based index, sorted by position in first text.
+     */
+    private Match getMatchByIndex(List<Match> matches, int oneBasedIndex) {
+        List<Match> sortedMatches = new ArrayList<>(matches);
+        sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
+
+        if (oneBasedIndex < 1 || oneBasedIndex > sortedMatches.size()) {
+            throw new RuntimeException("Invalid match index: " + oneBasedIndex);
+        }
+
+        return sortedMatches.get(oneBasedIndex - 1);
+    }
+
+    /**
+     * Gets the index of a match in the original list.
+     */
+    private int getOriginalIndex(List<Match> matches, Match targetMatch) {
+        for (int i = 0; i < matches.size(); i++) {
+            if (matches.get(i).equals(targetMatch)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Handles the print command.
+     */
+    private void handlePrintCommand(String[] parts, List<Match> matches, MatchResult result) {
+        if (parts.length < 2 || parts.length > 3) {
+            throw new RuntimeException("print command requires 1 or 2 arguments: print <n> [<number>]");
+        }
+
+        int matchIndex = Integer.parseInt(parts[1]); // 1-based index
+        int contextSize = (parts.length == 3) ? Integer.parseInt(parts[2]) : 0;
+
+        // Get the match by its display index (sorted by position)
+        Match match = getMatchByIndex(matches, matchIndex);
+
+        // Simple context printing (simplified for now)
+        String text1 = result.getText1().getContent();
+        String text2 = result.getText2().getContent();
+
+        // Calculate character positions from token positions
+        List<core.Token> seq1 = result.getSequence1();
+        List<core.Token> seq2 = result.getSequence2();
+
+        if (match.getStartPosSequence1() < seq1.size() && match.getStartPosSequence2() < seq2.size()) {
+            int startChar1 = seq1.get(match.getStartPosSequence1()).getStartPosition();
+            int endChar1 = seq1.get(Math.min(match.getStartPosSequence1() + match.getLength() - 1, seq1.size() - 1)).getEndPosition();
+
+            int startChar2 = seq2.get(match.getStartPosSequence2()).getStartPosition();
+            int endChar2 = seq2.get(Math.min(match.getStartPosSequence2() + match.getLength() - 1, seq2.size() - 1)).getEndPosition();
+
+            // Extract and print context
+            String context1 = extractContext(text1, startChar1, endChar1, contextSize);
+            String context2 = extractContext(text2, startChar2, endChar2, contextSize);
+
+            System.out.println(context1);
+            System.out.println("^".repeat(endChar1 - startChar1));
+            System.out.println(context2);
+            System.out.println("^".repeat(endChar2 - startChar2));
+        }
+    }
+
+    /**
+     * Extracts context around a match.
+     */
+    private String extractContext(String text, int start, int end, int contextSize) {
+        int contextStart = Math.max(0, start - contextSize);
+        int contextEnd = Math.min(text.length(), end + contextSize);
+
+        StringBuilder result = new StringBuilder();
+
+        if (contextStart > 0) {
+            result.append("...");
+        }
+
+        result.append(text.substring(contextStart, contextEnd));
+
+        if (contextEnd < text.length()) {
+            result.append("...");
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Handles the add command.
+     */
+    private void handleAddCommand(String[] parts, List<Match> matches, MatchResult result) {
+        if (parts.length != 4) {
+            throw new RuntimeException("add command requires 3 arguments: add <t1> <t2> <len>");
+        }
+
+        int t1 = Integer.parseInt(parts[1]);
+        int t2 = Integer.parseInt(parts[2]);
+        int len = Integer.parseInt(parts[3]);
+
+        Match newMatch = new Match(t1, t2, len);
+
+        // Check for overlaps
+        for (Match existing : matches) {
+            if (newMatch.overlapsWith(existing)) {
+                throw new RuntimeException("New match would overlap with existing match");
+            }
+        }
+
+        matches.add(newMatch);
+    }
+
+    /**
+     * Handles the discard command.
+     */
+    private void handleDiscardCommand(String[] parts, List<Match> matches) {
+        if (parts.length != 2) {
+            throw new RuntimeException("discard command requires 1 argument: discard <n>");
+        }
+
+        int matchIndex = Integer.parseInt(parts[1]); // 1-based index
+
+        // Get the match by its display index (sorted by position)
+        Match targetMatch = getMatchByIndex(matches, matchIndex);
+        int originalIndex = getOriginalIndex(matches, targetMatch);
+
+        if (originalIndex == -1) {
+            throw new RuntimeException("Match not found");
+        }
+
+        matches.remove(originalIndex);
+    }
+
+    /**
+     * Handles the extend command.
+     */
+    private void handleExtendCommand(String[] parts, List<Match> matches, MatchResult result) {
+        if (parts.length != 3) {
+            throw new RuntimeException("extend command requires 2 arguments: extend <n> <len>");
+        }
+
+        int matchIndex = Integer.parseInt(parts[1]) - 1;
+        int len = Integer.parseInt(parts[2]);
+
+        if (len == 0) {
+            throw new RuntimeException("Extension length cannot be 0");
+        }
+
+        if (matchIndex < 0 || matchIndex >= matches.size()) {
+            throw new RuntimeException("Invalid match index: " + (matchIndex + 1));
+        }
+
+        Match oldMatch = matches.get(matchIndex);
+        Match newMatch;
+
+        if (len > 0) {
+            // Extend at end
+            newMatch = new Match(oldMatch.getStartPosSequence1(),
+                    oldMatch.getStartPosSequence2(),
+                    oldMatch.getLength() + len);
+        } else {
+            // Extend at beginning (move start backwards)
+            newMatch = new Match(oldMatch.getStartPosSequence1() + len,
+                    oldMatch.getStartPosSequence2() + len,
+                    oldMatch.getLength() - len);
+        }
+
+        // Check for overlaps with other matches
+        for (int i = 0; i < matches.size(); i++) {
+            if (i != matchIndex && newMatch.overlapsWith(matches.get(i))) {
+                throw new RuntimeException("Extended match would overlap with existing match");
+            }
+        }
+
+        matches.set(matchIndex, newMatch);
+    }
+
+    /**
+     * Handles the truncate command.
+     */
+    private void handleTruncateCommand(String[] parts, List<Match> matches, MatchResult result) {
+        if (parts.length != 3) {
+            throw new RuntimeException("truncate command requires 2 arguments: truncate <n> <len>");
+        }
+
+        int matchIndex = Integer.parseInt(parts[1]) - 1;
+        int len = Integer.parseInt(parts[2]);
+
+        if (len == 0) {
+            throw new RuntimeException("Truncation length cannot be 0");
+        }
+
+        if (matchIndex < 0 || matchIndex >= matches.size()) {
+            throw new RuntimeException("Invalid match index: " + (matchIndex + 1));
+        }
+
+        Match oldMatch = matches.get(matchIndex);
+        Match newMatch;
+
+        if (len > 0) {
+            // Truncate from end
+            newMatch = new Match(oldMatch.getStartPosSequence1(),
+                    oldMatch.getStartPosSequence2(),
+                    Math.max(1, oldMatch.getLength() - len));
+        } else {
+            // Truncate from beginning
+            newMatch = new Match(oldMatch.getStartPosSequence1() - len,
+                    oldMatch.getStartPosSequence2() - len,
+                    Math.max(1, oldMatch.getLength() + len));
+        }
+
+        matches.set(matchIndex, newMatch);
+    }
+
+    /**
+     * Handles the set command.
+     */
+    private SimilarityMetric handleSetCommand(String[] parts) {
+        if (parts.length != 2) {
+            throw new RuntimeException("set command requires 1 argument: set <metric>");
+        }
+
+        String metricName = parts[1].toUpperCase();
+        SimilarityMetric metric = MetricFactory.createMetric(metricName);
+
+        if (metric == null) {
+            throw new RuntimeException("Unknown metric: " + metricName);
+        }
+
+        return metric;
+    }
+
+    @Override
+    public String getName() {
+        return "edit";
+    }
+
+    @Override
+    public String getUsage() {
+        return "edit <id> <id> - Enter interactive edit mode for a text pair";
+    }
 }
