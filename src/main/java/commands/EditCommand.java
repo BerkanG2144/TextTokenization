@@ -51,8 +51,8 @@ public class EditCommand implements Command {
             throw new CommandException("No comparison found for texts '" + id1 + "' and '" + id2 + "'");
         }
 
-        // Enter edit mode
-        enterEditMode(result);
+        // Enter edit mode - use the original command order (id1, id2)
+        enterEditMode(result, id1, id2);
 
         return "OK, exit editing mode.";
     }
@@ -61,13 +61,15 @@ public class EditCommand implements Command {
      * Enters the interactive edit mode.
      *
      * @param result the match result to edit
+     * @param id1 first text identifier from command
+     * @param id2 second text identifier from command
      */
-    private void enterEditMode(MatchResult result) {
+    private void enterEditMode(MatchResult result, String id1, String id2) {
         List<Match> matches = new ArrayList<>(result.getMatches());
         SimilarityMetric currentMetric = new metrics.SymmetricSimilarity(); // Default to AVG
 
         // Print initial state
-        printEditState(result, matches, currentMetric);
+        printEditState(result, matches, currentMetric, id1, id2);
 
         while (true) {
             System.out.print("> ");
@@ -84,13 +86,13 @@ public class EditCommand implements Command {
                 if ("exit".equals(command)) {
                     break;
                 } else if ("matches".equals(command)) {
-                    printMatches(matches);
+                    printMatches(matches, result, id1, id2);
                 } else if ("print".equals(command)) {
-                    handlePrintCommand(parts, matches, result);
+                    handlePrintCommand(parts, matches, result, id1, id2);
                 } else if ("add".equals(command)) {
                     handleAddCommand(parts, matches, result);
                 } else if ("discard".equals(command)) {
-                    handleDiscardCommand(parts, matches);
+                    handleDiscardCommand(parts, matches, result, id1, id2);
                 } else if ("extend".equals(command)) {
                     handleExtendCommand(parts, matches, result);
                 } else if ("truncate".equals(command)) {
@@ -104,12 +106,12 @@ public class EditCommand implements Command {
 
                 // Print state after each command (except exit)
                 if (!"exit".equals(command)) {
-                    printEditState(result, matches, currentMetric);
+                    printEditState(result, matches, currentMetric, id1, id2);
                 }
 
             } catch (Exception e) {
                 System.out.println("ERROR: " + e.getMessage());
-                printEditState(result, matches, currentMetric);
+                printEditState(result, matches, currentMetric, id1, id2);
             }
         }
     }
@@ -117,7 +119,7 @@ public class EditCommand implements Command {
     /**
      * Prints the current edit state.
      */
-    private void printEditState(MatchResult result, List<Match> matches, SimilarityMetric metric) {
+    private void printEditState(MatchResult result, List<Match> matches, SimilarityMetric metric, String id1, String id2) {
         // Calculate similarity with current matches
         MatchResult tempResult = new MatchResult(
                 result.getText1(), result.getText2(),
@@ -128,34 +130,55 @@ public class EditCommand implements Command {
         double similarity = metric.calculate(tempResult);
         String formattedSimilarity = metric.format(similarity);
 
-        System.out.println("Comparison of " + result.getText1().getIdentifier() +
-                ", " + result.getText2().getIdentifier() + ": " +
+        // Use the command order (id1, id2) for display
+        System.out.println("Comparison of " + id1 + ", " + id2 + ": " +
                 formattedSimilarity + " similarity, " + matches.size() +
                 " matches. Available commands: matches, print, add, extend, truncate, discard, set, exit.");
     }
 
     /**
-     * Prints all matches sorted by position in first text.
+     * Prints all matches sorted by position in first text of the command.
      * Note: Match indices for commands are 1-based!
      */
-    private void printMatches(List<Match> matches) {
-        // Sort matches by start position in first text (for edit mode display)
+    private void printMatches(List<Match> matches, MatchResult result, String id1, String id2) {
+        // Determine if we need to swap coordinates based on command order vs storage order
+        boolean needSwap = !result.getText1().getIdentifier().equals(id1);
+
+        // Sort matches by start position in the first text mentioned in command
         List<Match> sortedMatches = new ArrayList<>(matches);
-        sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
+        if (needSwap) {
+            // Sort by sequence2 position (second text in result is first in command)
+            sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence2(), m2.getStartPosSequence2()));
+        } else {
+            // Sort by sequence1 position (first text in result is first in command)
+            sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
+        }
 
         for (int i = 0; i < sortedMatches.size(); i++) {
             Match match = sortedMatches.get(i);
-            System.out.println("Match of length " + match.getLength() + ": " +
-                    match.getStartPosSequence1() + "-" + match.getStartPosSequence2());
+            if (needSwap) {
+                // Swap the positions for display
+                System.out.println("Match of length " + match.getLength() + ": " +
+                        match.getStartPosSequence2() + "-" + match.getStartPosSequence1());
+            } else {
+                System.out.println("Match of length " + match.getLength() + ": " +
+                        match.getStartPosSequence1() + "-" + match.getStartPosSequence2());
+            }
         }
     }
 
     /**
-     * Gets a match by 1-based index, sorted by position in first text.
+     * Gets a match by 1-based index, sorted by position in first text of command.
      */
-    private Match getMatchByIndex(List<Match> matches, int oneBasedIndex) {
+    private Match getMatchByIndex(List<Match> matches, int oneBasedIndex, MatchResult result, String id1) {
+        boolean needSwap = !result.getText1().getIdentifier().equals(id1);
+
         List<Match> sortedMatches = new ArrayList<>(matches);
-        sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
+        if (needSwap) {
+            sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence2(), m2.getStartPosSequence2()));
+        } else {
+            sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
+        }
 
         if (oneBasedIndex < 1 || oneBasedIndex > sortedMatches.size()) {
             throw new RuntimeException("Invalid match index: " + oneBasedIndex);
@@ -179,7 +202,7 @@ public class EditCommand implements Command {
     /**
      * Handles the print command.
      */
-    private void handlePrintCommand(String[] parts, List<Match> matches, MatchResult result) {
+    private void handlePrintCommand(String[] parts, List<Match> matches, MatchResult result, String id1, String id2) {
         if (parts.length < 2 || parts.length > 3) {
             throw new RuntimeException("print command requires 1 or 2 arguments: print <n> [<number>]");
         }
@@ -188,7 +211,7 @@ public class EditCommand implements Command {
         int contextSize = (parts.length == 3) ? Integer.parseInt(parts[2]) : 0;
 
         // Get the match by its display index (sorted by position)
-        Match match = getMatchByIndex(matches, matchIndex);
+        Match match = getMatchByIndex(matches, matchIndex, result, id1);
 
         // Simple context printing (simplified for now)
         String text1 = result.getText1().getContent();
@@ -265,7 +288,7 @@ public class EditCommand implements Command {
     /**
      * Handles the discard command.
      */
-    private void handleDiscardCommand(String[] parts, List<Match> matches) {
+    private void handleDiscardCommand(String[] parts, List<Match> matches, MatchResult result, String id1, String id2) {
         if (parts.length != 2) {
             throw new RuntimeException("discard command requires 1 argument: discard <n>");
         }
@@ -273,7 +296,7 @@ public class EditCommand implements Command {
         int matchIndex = Integer.parseInt(parts[1]); // 1-based index
 
         // Get the match by its display index (sorted by position)
-        Match targetMatch = getMatchByIndex(matches, matchIndex);
+        Match targetMatch = getMatchByIndex(matches, matchIndex, result, id1);
         int originalIndex = getOriginalIndex(matches, targetMatch);
 
         if (originalIndex == -1) {

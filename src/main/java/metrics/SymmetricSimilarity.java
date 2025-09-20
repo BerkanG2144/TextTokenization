@@ -2,6 +2,8 @@ package metrics;
 
 import matching.MatchResult;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 
 /**
  * Symmetric similarity metric (AVG): 2m/(a+b)
@@ -10,7 +12,12 @@ import java.text.DecimalFormat;
  * @author [Dein u-Kürzel]
  */
 public class SymmetricSimilarity implements SimilarityMetric {
-    private static final DecimalFormat FORMATTER = new DecimalFormat("0.00");
+    private static final DecimalFormat FORMATTER;
+
+    static {
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+        FORMATTER = new DecimalFormat("0.00", symbols);
+    }
 
     @Override
     public double calculate(MatchResult result) {
