@@ -84,6 +84,8 @@ public class EditCommand implements Command {
 
             try {
                 if ("exit".equals(command)) {
+                    // Update the original result with modified matches before exiting
+                    updateAnalysisResult(result, matches, id1, id2);
                     break;
                 } else if ("matches".equals(command)) {
                     printMatches(matches, result, id1, id2);
@@ -94,9 +96,9 @@ public class EditCommand implements Command {
                 } else if ("discard".equals(command)) {
                     handleDiscardCommand(parts, matches, result, id1, id2);
                 } else if ("extend".equals(command)) {
-                    handleExtendCommand(parts, matches, result);
+                    handleExtendCommand(parts, matches, result, id1, id2);
                 } else if ("truncate".equals(command)) {
-                    handleTruncateCommand(parts, matches, result);
+                    handleTruncateCommand(parts, matches, result, id1, id2);
                 } else if ("set".equals(command)) {
                     currentMetric = handleSetCommand(parts);
                 } else {
@@ -213,24 +215,31 @@ public class EditCommand implements Command {
         // Get the match by its display index (sorted by position)
         Match match = getMatchByIndex(matches, matchIndex, result, id1);
 
-        // Simple context printing (simplified for now)
-        String text1 = result.getText1().getContent();
-        String text2 = result.getText2().getContent();
+        // Determine if we need to swap based on command order vs storage order
+        boolean needSwap = !result.getText1().getIdentifier().equals(id1);
 
-        // Calculate character positions from token positions
-        List<core.Token> seq1 = result.getSequence1();
-        List<core.Token> seq2 = result.getSequence2();
+        // Get the texts in command order
+        String firstText = needSwap ? result.getText2().getContent() : result.getText1().getContent();
+        String secondText = needSwap ? result.getText1().getContent() : result.getText2().getContent();
 
-        if (match.getStartPosSequence1() < seq1.size() && match.getStartPosSequence2() < seq2.size()) {
-            int startChar1 = seq1.get(match.getStartPosSequence1()).getStartPosition();
-            int endChar1 = seq1.get(Math.min(match.getStartPosSequence1() + match.getLength() - 1, seq1.size() - 1)).getEndPosition();
+        // Get the sequences in command order
+        List<core.Token> firstSeq = needSwap ? result.getSequence2() : result.getSequence1();
+        List<core.Token> secondSeq = needSwap ? result.getSequence1() : result.getSequence2();
 
-            int startChar2 = seq2.get(match.getStartPosSequence2()).getStartPosition();
-            int endChar2 = seq2.get(Math.min(match.getStartPosSequence2() + match.getLength() - 1, seq2.size() - 1)).getEndPosition();
+        // Get match positions in command order
+        int firstPos = needSwap ? match.getStartPosSequence2() : match.getStartPosSequence1();
+        int secondPos = needSwap ? match.getStartPosSequence1() : match.getStartPosSequence2();
 
-            // Extract and print context
-            String context1 = extractContext(text1, startChar1, endChar1, contextSize);
-            String context2 = extractContext(text2, startChar2, endChar2, contextSize);
+        if (firstPos < firstSeq.size() && secondPos < secondSeq.size()) {
+            int startChar1 = firstSeq.get(firstPos).getStartPosition();
+            int endChar1 = firstSeq.get(Math.min(firstPos + match.getLength() - 1, firstSeq.size() - 1)).getEndPosition();
+
+            int startChar2 = secondSeq.get(secondPos).getStartPosition();
+            int endChar2 = secondSeq.get(Math.min(secondPos + match.getLength() - 1, secondSeq.size() - 1)).getEndPosition();
+
+            // Extract and print context in command order
+            String context1 = extractContext(firstText, startChar1, endChar1, contextSize);
+            String context2 = extractContext(secondText, startChar2, endChar2, contextSize);
 
             System.out.println(context1);
             System.out.println("^".repeat(endChar1 - startChar1));
@@ -309,23 +318,27 @@ public class EditCommand implements Command {
     /**
      * Handles the extend command.
      */
-    private void handleExtendCommand(String[] parts, List<Match> matches, MatchResult result) {
+    private void handleExtendCommand(String[] parts, List<Match> matches, MatchResult result, String id1, String id2) {
         if (parts.length != 3) {
             throw new RuntimeException("extend command requires 2 arguments: extend <n> <len>");
         }
 
-        int matchIndex = Integer.parseInt(parts[1]) - 1;
+        int displayIndex = Integer.parseInt(parts[1]); // 1-based index
         int len = Integer.parseInt(parts[2]);
 
         if (len == 0) {
             throw new RuntimeException("Extension length cannot be 0");
         }
 
-        if (matchIndex < 0 || matchIndex >= matches.size()) {
-            throw new RuntimeException("Invalid match index: " + (matchIndex + 1));
+        // Get the match by its display index (sorted by position in first text)
+        Match targetMatch = getMatchByIndex(matches, displayIndex, result, id1);
+        int originalIndex = getOriginalIndex(matches, targetMatch);
+
+        if (originalIndex == -1) {
+            throw new RuntimeException("Match not found");
         }
 
-        Match oldMatch = matches.get(matchIndex);
+        Match oldMatch = matches.get(originalIndex);
         Match newMatch;
 
         if (len > 0) {
@@ -342,34 +355,38 @@ public class EditCommand implements Command {
 
         // Check for overlaps with other matches
         for (int i = 0; i < matches.size(); i++) {
-            if (i != matchIndex && newMatch.overlapsWith(matches.get(i))) {
+            if (i != originalIndex && newMatch.overlapsWith(matches.get(i))) {
                 throw new RuntimeException("Extended match would overlap with existing match");
             }
         }
 
-        matches.set(matchIndex, newMatch);
+        matches.set(originalIndex, newMatch);
     }
 
     /**
      * Handles the truncate command.
      */
-    private void handleTruncateCommand(String[] parts, List<Match> matches, MatchResult result) {
+    private void handleTruncateCommand(String[] parts, List<Match> matches, MatchResult result, String id1, String id2) {
         if (parts.length != 3) {
             throw new RuntimeException("truncate command requires 2 arguments: truncate <n> <len>");
         }
 
-        int matchIndex = Integer.parseInt(parts[1]) - 1;
+        int displayIndex = Integer.parseInt(parts[1]); // 1-based index
         int len = Integer.parseInt(parts[2]);
 
         if (len == 0) {
             throw new RuntimeException("Truncation length cannot be 0");
         }
 
-        if (matchIndex < 0 || matchIndex >= matches.size()) {
-            throw new RuntimeException("Invalid match index: " + (matchIndex + 1));
+        // Get the match by its display index (sorted by position in first text)
+        Match targetMatch = getMatchByIndex(matches, displayIndex, result, id1);
+        int originalIndex = getOriginalIndex(matches, targetMatch);
+
+        if (originalIndex == -1) {
+            throw new RuntimeException("Match not found");
         }
 
-        Match oldMatch = matches.get(matchIndex);
+        Match oldMatch = matches.get(originalIndex);
         Match newMatch;
 
         if (len > 0) {
@@ -384,7 +401,7 @@ public class EditCommand implements Command {
                     Math.max(1, oldMatch.getLength() + len));
         }
 
-        matches.set(matchIndex, newMatch);
+        matches.set(originalIndex, newMatch);
     }
 
     /**
@@ -403,6 +420,21 @@ public class EditCommand implements Command {
         }
 
         return metric;
+    }
+
+    /**
+     * Updates the analysis result with modified matches.
+     */
+    private void updateAnalysisResult(MatchResult originalResult, List<Match> modifiedMatches, String id1, String id2) {
+        // Create a new MatchResult with the modified matches
+        MatchResult newResult = new MatchResult(
+                originalResult.getText1(), originalResult.getText2(),
+                originalResult.getSequence1(), originalResult.getSequence2(),
+                modifiedMatches, originalResult.getTokenizationStrategy(), originalResult.getMinMatchLength()
+        );
+
+        // Update the analysis result in the AnalyzeCommand
+        analyzeCommand.updateMatchResult(id1, id2, newResult);
     }
 
     @Override

@@ -136,6 +136,37 @@ public class AnalyzeCommand implements Command {
         return lastAnalysisResult;
     }
 
+    /**
+     * Updates a specific match result in the analysis.
+     *
+     * @param id1 first text identifier
+     * @param id2 second text identifier
+     * @param newResult the new match result
+     */
+    public void updateMatchResult(String id1, String id2, MatchResult newResult) {
+        if (lastAnalysisResult == null) {
+            return;
+        }
+
+        // Find and replace the match result in the analysis
+        List<MatchResult> allResults = new ArrayList<>(lastAnalysisResult.getAllResults());
+        for (int i = 0; i < allResults.size(); i++) {
+            MatchResult result = allResults.get(i);
+            if (result.involves(id1, id2)) {
+                allResults.set(i, newResult);
+                break;
+            }
+        }
+
+        // Create a new AnalysisResult with updated results
+        lastAnalysisResult = new AnalysisResult(
+                allResults,
+                lastAnalysisResult.getTokenizationStrategy(),
+                lastAnalysisResult.getMinMatchLength(),
+                lastAnalysisResult.getAnalysisTimeMs()
+        );
+    }
+
     @Override
     public String getName() {
         return "analyze";
