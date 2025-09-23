@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Command to enter interactive inspect mode for a text pair comparison.
@@ -19,6 +21,8 @@ import java.util.Scanner;
 public class InspectCommand implements Command {
     private final AnalyzeCommand analyzeCommand;
     private final Scanner scanner;
+    // Store treated matches persistently across inspect calls
+    private final Map<String, Set<Match>> treatedMatchesPerPair = new HashMap<>();
 
     /**
      * Creates a new InspectCommand.
@@ -75,6 +79,13 @@ public class InspectCommand implements Command {
     }
 
     /**
+     * Clears treated matches when a new analysis is run
+     */
+    public void clearTreatedMatches() {
+        treatedMatchesPerPair.clear();
+    }
+
+    /**
      * Enters the interactive inspect mode.
      */
     private void enterInspectMode(MatchResult result, String id1, String id2, int contextSize) {
@@ -92,7 +103,11 @@ public class InspectCommand implements Command {
             sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
         }
 
-        // Track decisions for each match
+        // Get or create the treated matches set for this text pair
+        String pairKey = id1 + "-" + id2;
+        Set<Match> treatedMatches = treatedMatchesPerPair.computeIfAbsent(pairKey, k -> new HashSet<>());
+
+        // Track decisions for display purposes
         Map<Match, String> decisions = new HashMap<>();
         List<Match> modifiedMatches = new ArrayList<>(originalMatches);
 
@@ -100,6 +115,12 @@ public class InspectCommand implements Command {
 
         while (currentIndex < sortedMatches.size()) {
             Match currentMatch = sortedMatches.get(currentIndex);
+
+            // Skip matches that have been treated (accepted) in this or previous inspect calls
+            if (treatedMatches.contains(currentMatch)) {
+                currentIndex++;
+                continue;
+            }
 
             // Display current match
             displayMatch(currentMatch, result, id1, id2, contextSize, decisions);
@@ -117,20 +138,29 @@ public class InspectCommand implements Command {
                     currentIndex++;
                     break;
                 case "P": // Previous
-                    currentIndex = Math.max(0, currentIndex - 1);
+                    // Go back to the previous untreated match
+                    int prevIndex = currentIndex - 1;
+                    while (prevIndex >= 0 && treatedMatches.contains(sortedMatches.get(prevIndex))) {
+                        prevIndex--;
+                    }
+                    currentIndex = Math.max(0, prevIndex);
                     break;
                 case "A": // Accept
                     decisions.put(currentMatch, "Accept");
-                    currentIndex++;
+                    treatedMatches.add(currentMatch);
+                    // Don't increment currentIndex here - the while loop will handle it
+                    // The match will be skipped in the next iteration due to the treated check
                     break;
                 case "I": // Ignore
                     decisions.put(currentMatch, "Ignore");
+                    treatedMatches.add(currentMatch);
                     // Remove from modified matches
                     modifiedMatches.removeIf(m -> m.equals(currentMatch));
                     currentIndex++;
                     break;
                 case "X": // Exclude
                     decisions.put(currentMatch, "Exclude");
+                    treatedMatches.add(currentMatch);
                     // Remove from modified matches
                     modifiedMatches.removeIf(m -> m.equals(currentMatch));
                     currentIndex++;
