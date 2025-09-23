@@ -5,6 +5,7 @@ import matching.*;
 import tokenization.*;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 /**
  * Command to analyze all loaded texts for similarities.
@@ -79,6 +80,10 @@ public class AnalyzeCommand implements Command {
     private List<MatchResult> analyzeAllPairs(TokenizationStrategy strategy, int minMatchLength) {
         List<MatchResult> results = new ArrayList<>();
         List<Text> texts = new ArrayList<>(textManager.getAllTexts());
+
+        // Sort texts alphabetically by identifier to ensure consistent ordering
+        texts.sort(Comparator.comparing(Text::getIdentifier));
+
         SequenceMatcher matcher = new SequenceMatcher();
 
         // Compare all pairs
