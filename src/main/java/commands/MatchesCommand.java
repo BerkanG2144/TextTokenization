@@ -51,11 +51,11 @@ public class MatchesCommand implements Command {
             return ""; // No matches found
         }
 
-        // Sort matches according to specification:
-        // 1. Descending by length
-        // 2. Ascending by start index in search sequence
-        // 3. Ascending by start index in pattern sequence
         List<Match> sortedMatches = new ArrayList<>(matches);
+
+// Bestimme ob text1 search text ist
+        boolean text1IsSearch = result.getText1().getIdentifier().equals(result.getSearchText().getIdentifier());
+
         sortedMatches.sort(new Comparator<Match>() {
             @Override
             public int compare(Match m1, Match m2) {
@@ -65,14 +65,22 @@ public class MatchesCommand implements Command {
                     return lengthCompare;
                 }
 
+                // Get search positions for both matches
+                int searchPos1 = text1IsSearch ? m1.getStartPosSequence1() : m1.getStartPosSequence2();
+                int searchPos2 = text1IsSearch ? m2.getStartPosSequence1() : m2.getStartPosSequence2();
+
                 // Then by start position in search sequence (ascending)
-                int pos1Compare = Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1());
-                if (pos1Compare != 0) {
-                    return pos1Compare;
+                int searchCompare = Integer.compare(searchPos1, searchPos2);
+                if (searchCompare != 0) {
+                    return searchCompare;
                 }
 
+                // Get pattern positions for both matches
+                int patternPos1 = text1IsSearch ? m1.getStartPosSequence2() : m1.getStartPosSequence1();
+                int patternPos2 = text1IsSearch ? m2.getStartPosSequence2() : m2.getStartPosSequence1();
+
                 // Finally by start position in pattern sequence (ascending)
-                return Integer.compare(m1.getStartPosSequence2(), m2.getStartPosSequence2());
+                return Integer.compare(patternPos1, patternPos2);
             }
         });
 
@@ -85,15 +93,24 @@ public class MatchesCommand implements Command {
 
             Match match = sortedMatches.get(i);
 
-            // Format: Match of length <n>: <t1> - <t2>
-            // t1 = start index in search sequence
-            // t2 = start index in pattern sequence
+            // Bestimme Search und Pattern Positionen basierend auf MatchResult
+            int searchPos, patternPos;
+
+            if (result.getText1().getIdentifier().equals(result.getSearchText().getIdentifier())) {
+                // text1 ist search text
+                searchPos = match.getStartPosSequence1();
+                patternPos = match.getStartPosSequence2();
+            } else {
+                // text2 ist search text
+                searchPos = match.getStartPosSequence2();
+                patternPos = match.getStartPosSequence1();
+            }
             output.append("Match of length ")
                     .append(match.getLength())
                     .append(": ")
-                    .append(match.getStartPosSequence1())
+                    .append(searchPos)
                     .append("-")
-                    .append(match.getStartPosSequence2());
+                    .append(patternPos);
         }
 
         return output.toString();

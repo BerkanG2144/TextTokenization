@@ -101,13 +101,6 @@ public class InspectCommand implements Command {
         while (currentIndex < sortedMatches.size()) {
             Match currentMatch = sortedMatches.get(currentIndex);
 
-            // Skip matches that have been treated (accepted)
-            String decision = decisions.get(currentMatch);
-            if ("Accept".equals(decision)) {
-                currentIndex++;
-                continue;
-            }
-
             // Display current match
             displayMatch(currentMatch, result, id1, id2, contextSize, decisions);
 
