@@ -14,7 +14,7 @@ import java.util.Set;
 
 /**
  * Command to enter interactive inspect mode for a text pair comparison.
- * Usage: inspect <id> <id> [number]
+ * Usage: inspect <id> <id> [context] [minLen]
  *
  * @author [Dein u-Kürzel]
  */
@@ -37,15 +37,16 @@ public class InspectCommand implements Command {
 
     @Override
     public String execute(String[] args) throws CommandException {
-        if (args.length < 2 || args.length > 3) {
-            throw new CommandException("inspect command requires two or three arguments: inspect <id> <id> [number]");
+        if (args.length < 2 || args.length > 4) {
+            throw new CommandException("inspect command requires: inspect <id> <id> [context] [minLen]");
         }
 
         String id1 = args[0];
         String id2 = args[1];
         int contextSize = 0;
+        int displayMinLenArg = -1;
 
-        if (args.length == 3) {
+        if (args.length >= 3) {
             try {
                 contextSize = Integer.parseInt(args[2]);
                 if (contextSize < 0) {
@@ -56,13 +57,24 @@ public class InspectCommand implements Command {
             }
         }
 
+        if (args.length == 4) {
+            try {
+                displayMinLenArg = Integer.parseInt(args[3]);
+                if (displayMinLenArg <= 0) {
+                    throw new CommandException("minLen must be positive");
+                }
+            } catch (NumberFormatException e) {
+                throw new CommandException("Invalid number format for minLen");
+            }
+        }
+
         // Get analysis results
         AnalysisResult analysisResult = analyzeCommand.getLastAnalysisResult();
         if (analysisResult == null) {
             throw new CommandException("No analysis results available. Run analyze command first.");
         }
 
-        // Find the match result for these two texts
+        // Find the match result for these two texts (in given order)
         MatchResult result = analysisResult.getResult(id1, id2);
         if (result == null) {
             throw new CommandException("No comparison found for texts '" + id1 + "' and '" + id2 + "'");
@@ -73,7 +85,7 @@ public class InspectCommand implements Command {
         }
 
         // Enter inspect mode
-        enterInspectMode(result, id1, id2, contextSize);
+        enterInspectMode(result, id1, id2, contextSize, displayMinLenArg);
 
         return "OK, exit inspection mode";
     }
@@ -85,26 +97,43 @@ public class InspectCommand implements Command {
         treatedMatchesPerPair.clear();
     }
 
+    /* ---------- helpers ---------- */
+
+    private boolean isDisplayable(Match m, int minLen) {
+        return m.getLength() >= minLen;
+    }
+
     /**
      * Enters the interactive inspect mode.
      */
-    private void enterInspectMode(MatchResult result, String id1, String id2, int contextSize) {
+    private void enterInspectMode(MatchResult result, String id1, String id2, int contextSize, int displayMinLenArg) {
+        // Primary threshold: entweder explizit übergeben oder mindestens 2 bzw. MinMatchLen des Ergebnisses
+        int primaryMinLen = (displayMinLenArg > 0)
+                ? displayMinLenArg
+                : Math.max(2, result.getMinMatchLength());
+        int secondaryMinLen = 1; // Fallback, wenn längere aufgebraucht sind
+        boolean usePrimary = true;
+
         List<Match> originalMatches = result.getMatches();
 
-        // Sort matches by position in first text (command order)
+        // Sort matches by position in "first text of the command order", tie-breaker: longer first
         List<Match> sortedMatches = new ArrayList<>(originalMatches);
         boolean needSwap = !result.getText1().getIdentifier().equals(id1);
 
         if (needSwap) {
-            // Sort by position in sequence2 (which corresponds to first text in command)
-            sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence2(), m2.getStartPosSequence2()));
+            sortedMatches.sort((m1, m2) -> {
+                int c = Integer.compare(m1.getStartPosSequence2(), m2.getStartPosSequence2());
+                return (c != 0) ? c : -Integer.compare(m1.getLength(), m2.getLength());
+            });
         } else {
-            // Sort by position in sequence1 (which corresponds to first text in command)
-            sortedMatches.sort((m1, m2) -> Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1()));
+            sortedMatches.sort((m1, m2) -> {
+                int c = Integer.compare(m1.getStartPosSequence1(), m2.getStartPosSequence1());
+                return (c != 0) ? c : -Integer.compare(m1.getLength(), m2.getLength());
+            });
         }
 
-        // Get or create the treated matches set for this text pair
-        String pairKey = id1 + "-" + id2;
+        // Get or create the treated matches set for this text pair (order-independent key)
+        String pairKey = (id1.compareTo(id2) <= 0) ? (id1 + "-" + id2) : (id2 + "-" + id1);
         Set<Match> treatedMatches = treatedMatchesPerPair.computeIfAbsent(pairKey, k -> new HashSet<>());
 
         // Track decisions for display purposes
@@ -113,70 +142,112 @@ public class InspectCommand implements Command {
 
         int currentIndex = 0;
 
-        while (currentIndex < sortedMatches.size()) {
-            Match currentMatch = sortedMatches.get(currentIndex);
-
-            // Skip matches that have been treated (accepted) in this or previous inspect calls
-            if (treatedMatches.contains(currentMatch)) {
-                currentIndex++;
-                continue;
+        while (true) {
+            // Initial/aktueller Kandidat: nächstes unbehandeltes & displaybares Match (mit möglichem Fallback)
+            int base = (currentIndex - 1 + sortedMatches.size()) % sortedMatches.size();
+            int next = findNextUntreated(base, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
+            if (next == -1) {
+                if (usePrimary) {
+                    int anyShorter = findNextUntreated(base, sortedMatches, treatedMatches, secondaryMinLen);
+                    if (anyShorter != -1) {
+                        System.out.println("(No more matches ≥" + primaryMinLen + ". Switching to shorter matches.)");
+                        usePrimary = false;
+                        currentIndex = anyShorter;
+                    } else {
+                        System.out.println("Inspection complete. Exit inspection mode");
+                        updateAnalysisResult(result, modifiedMatches, id1, id2);
+                        return;
+                    }
+                } else {
+                    System.out.println("Inspection complete. Exit inspection mode");
+                    updateAnalysisResult(result, modifiedMatches, id1, id2);
+                    return;
+                }
+            } else {
+                currentIndex = next;
             }
 
-            // Display current match
+            Match currentMatch = sortedMatches.get(currentIndex);
             displayMatch(currentMatch, result, id1, id2, contextSize, decisions);
 
             // Get user input
             System.out.print("> ");
             String input = scanner.nextLine().trim().toUpperCase();
-
-            if (input.isEmpty()) {
-                input = "C"; // Default to Continue
-            }
+            if (input.isEmpty()) input = "C";
 
             switch (input) {
-                case "C": // Continue
-                    currentIndex++;
-                    break;
-                case "P": // Previous
-                    // Go back to the previous untreated match
-                    int prevIndex = currentIndex - 1;
-                    while (prevIndex >= 0 && treatedMatches.contains(sortedMatches.get(prevIndex))) {
-                        prevIndex--;
+                case "C": {
+                    int n = findNextUntreated(currentIndex, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
+                    if (n == -1) {
+                        if (usePrimary) {
+                            int anyShorter = findNextUntreated(currentIndex, sortedMatches, treatedMatches, secondaryMinLen);
+                            if (anyShorter != -1) {
+                                System.out.println("(No more matches ≥" + primaryMinLen + ". Switching to shorter matches.)");
+                                usePrimary = false;
+                                currentIndex = anyShorter;
+                                break;
+                            }
+                        }
+                        System.out.println("No more untreated matches. Inspection done.");
+                        updateAnalysisResult(result, modifiedMatches, id1, id2);
+                        return;
                     }
-                    currentIndex = Math.max(0, prevIndex);
+                    currentIndex = n;
                     break;
-                case "A": // Accept
-                    decisions.put(currentMatch, "Accept");
+                }
+                case "P": {
+                    int p = findPrevUntreated(currentIndex, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
+                    if (p == -1) {
+                        if (usePrimary) {
+                            int anyShorter = findPrevUntreated(currentIndex, sortedMatches, treatedMatches, secondaryMinLen);
+                            if (anyShorter != -1) {
+                                System.out.println("(No more matches ≥" + primaryMinLen + " backwards. Switching to shorter matches.)");
+                                usePrimary = false;
+                                currentIndex = anyShorter;
+                                break;
+                            }
+                        }
+                        System.out.println("No more untreated matches. Inspection done.");
+                        updateAnalysisResult(result, modifiedMatches, id1, id2);
+                        return;
+                    }
+                    currentIndex = p;
+                    break;
+                }
+                case "A":
+                case "I":
+                case "X": {
+                    decisions.put(currentMatch, input.equals("A") ? "Accept" : input.equals("I") ? "Ignore" : "Exclude");
                     treatedMatches.add(currentMatch);
-                    // Don't increment currentIndex here - the while loop will handle it
-                    // The match will be skipped in the next iteration due to the treated check
+                    if (!input.equals("A")) {
+                        // lokal entfernen
+                        modifiedMatches.removeIf(m -> m.equals(currentMatch));
+                    }
+                    int n = findNextUntreated(currentIndex, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
+                    if (n == -1 && usePrimary) {
+                        int anyShorter = findNextUntreated(currentIndex, sortedMatches, treatedMatches, secondaryMinLen);
+                        if (anyShorter != -1) {
+                            System.out.println("(No more matches ≥" + primaryMinLen + ". Switching to shorter matches.)");
+                            usePrimary = false;
+                            currentIndex = anyShorter;
+                            break;
+                        }
+                    }
+                    if (n == -1) {
+                        System.out.println("No more untreated matches. Inspection done.");
+                        updateAnalysisResult(result, modifiedMatches, id1, id2);
+                        return;
+                    }
+                    currentIndex = n;
                     break;
-                case "I": // Ignore
-                    decisions.put(currentMatch, "Ignore");
-                    treatedMatches.add(currentMatch);
-                    // Remove from modified matches
-                    modifiedMatches.removeIf(m -> m.equals(currentMatch));
-                    currentIndex++;
-                    break;
-                case "X": // Exclude
-                    decisions.put(currentMatch, "Exclude");
-                    treatedMatches.add(currentMatch);
-                    // Remove from modified matches
-                    modifiedMatches.removeIf(m -> m.equals(currentMatch));
-                    currentIndex++;
-                    break;
-                case "B": // Back (exit)
+                }
+                case "B":
                     updateAnalysisResult(result, modifiedMatches, id1, id2);
                     return;
                 default:
                     System.out.println("Invalid command. Use C, P, A, I, X, or B.");
-                    continue;
             }
         }
-
-        // All matches inspected
-        System.out.println("Inspection complete. Exit inspection mode");
-        updateAnalysisResult(result, modifiedMatches, id1, id2);
     }
 
     /**
@@ -197,21 +268,27 @@ public class InspectCommand implements Command {
         int secondPos = needSwap ? match.getStartPosSequence1() : match.getStartPosSequence2();
 
         if (firstPos < firstSeq.size() && secondPos < secondSeq.size()) {
-            // Calculate character positions
+            // Calculate character positions correctly
             int startChar1 = firstSeq.get(firstPos).getStartPosition();
-            int endChar1 = firstSeq.get(Math.min(firstPos + match.getLength() - 1, firstSeq.size() - 1)).getEndPosition();
+            int lastTokenIndex1 = Math.min(firstPos + match.getLength() - 1, firstSeq.size() - 1);
+            int endChar1 = firstSeq.get(lastTokenIndex1).getEndPosition();
 
             int startChar2 = secondSeq.get(secondPos).getStartPosition();
-            int endChar2 = secondSeq.get(Math.min(secondPos + match.getLength() - 1, secondSeq.size() - 1)).getEndPosition();
+            int lastTokenIndex2 = Math.min(secondPos + match.getLength() - 1, secondSeq.size() - 1);
+            int endChar2 = secondSeq.get(lastTokenIndex2).getEndPosition();
 
             // Extract and display context
             String context1 = extractContext(firstText, startChar1, endChar1, contextSize);
             String context2 = extractContext(secondText, startChar2, endChar2, contextSize);
 
+            // Calculate actual match length in characters
+            int matchLength1 = endChar1 - startChar1;
+            int matchLength2 = endChar2 - startChar2;
+
             System.out.println(context1);
-            System.out.println("^".repeat(Math.max(1, endChar1 - startChar1)));
+            System.out.println("^".repeat(Math.max(1, matchLength1)));
             System.out.println(context2);
-            System.out.println("^".repeat(Math.max(1, endChar2 - startChar2)));
+            System.out.println("^".repeat(Math.max(1, matchLength2)));
         }
 
         // Display current decision
@@ -219,6 +296,36 @@ public class InspectCommand implements Command {
         System.out.println("Current decision: " + currentDecision);
         System.out.println();
         System.out.println("[C]ontinue, [P]revious, [A]ccept, [I]gnore, e[X]clude, [B]ack? (C)");
+    }
+
+    /* ---- Finder mit Längenfilter + Wrap ---- */
+
+    private int findNextUntreated(int startExclusive, List<Match> matches, Set<Match> treated, int minLen) {
+        int n = matches.size();
+        if (n == 0) return -1;
+        int i = (startExclusive + 1) % n;
+        while (i != startExclusive) {
+            Match m = matches.get(i);
+            if (!treated.contains(m) && isDisplayable(m, minLen)) return i;
+            i = (i + 1) % n;
+        }
+        Match m0 = matches.get(startExclusive);
+        if (!treated.contains(m0) && isDisplayable(m0, minLen)) return startExclusive;
+        return -1;
+    }
+
+    private int findPrevUntreated(int startExclusive, List<Match> matches, Set<Match> treated, int minLen) {
+        int n = matches.size();
+        if (n == 0) return -1;
+        int i = (startExclusive - 1 + n) % n;
+        while (i != startExclusive) {
+            Match m = matches.get(i);
+            if (!treated.contains(m) && isDisplayable(m, minLen)) return i;
+            i = (i - 1 + n) % n;
+        }
+        Match m0 = matches.get(startExclusive);
+        if (!treated.contains(m0) && isDisplayable(m0, minLen)) return startExclusive;
+        return -1;
     }
 
     /**
@@ -265,6 +372,6 @@ public class InspectCommand implements Command {
 
     @Override
     public String getUsage() {
-        return "inspect <id> <id> [number] - Enter interactive inspect mode for a text pair";
+        return "inspect <id> <id> [context] [minLen] - Enter interactive inspect mode for a text pair";
     }
 }
