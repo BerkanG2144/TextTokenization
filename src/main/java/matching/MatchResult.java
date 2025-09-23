@@ -19,6 +19,7 @@ public class MatchResult {
     private final List<Match> matches;
     private final String tokenizationStrategy;
     private final int minMatchLength;
+    private final boolean text1IsSearch; // true if text1 was search sequence, false if text2 was search sequence
 
     /**
      * Creates a new MatchResult.
@@ -41,6 +42,16 @@ public class MatchResult {
         this.matches = new ArrayList<>(matches);
         this.tokenizationStrategy = tokenizationStrategy;
         this.minMatchLength = minMatchLength;
+
+        // Determine which text was the search sequence
+        // Search sequence is the longer one, or text1 if same length
+        if (sequence1.size() > sequence2.size()) {
+            this.text1IsSearch = true;
+        } else if (sequence1.size() < sequence2.size()) {
+            this.text1IsSearch = false;
+        } else {
+            this.text1IsSearch = true; // Default to text1 for same length
+        }
     }
 
     /**
@@ -62,6 +73,24 @@ public class MatchResult {
     }
 
     /**
+     * Gets the search text (longer sequence or text1 if same length).
+     *
+     * @return the search text
+     */
+    public Text getSearchText() {
+        return text1IsSearch ? text1 : text2;
+    }
+
+    /**
+     * Gets the pattern text (shorter sequence or text2 if same length).
+     *
+     * @return the pattern text
+     */
+    public Text getPatternText() {
+        return text1IsSearch ? text2 : text1;
+    }
+
+    /**
      * Gets the token sequence of the first text.
      *
      * @return the first token sequence
@@ -77,6 +106,24 @@ public class MatchResult {
      */
     public List<core.Token> getSequence2() {
         return new ArrayList<>(sequence2);
+    }
+
+    /**
+     * Gets the search sequence (longer one or sequence1 if same length).
+     *
+     * @return the search sequence
+     */
+    public List<core.Token> getSearchSequence() {
+        return text1IsSearch ? sequence1 : sequence2;
+    }
+
+    /**
+     * Gets the pattern sequence (shorter one or sequence2 if same length).
+     *
+     * @return the pattern sequence
+     */
+    public List<core.Token> getPatternSequence() {
+        return text1IsSearch ? sequence2 : sequence1;
     }
 
     /**
@@ -134,5 +181,14 @@ public class MatchResult {
     public boolean involves(String id1, String id2) {
         return (text1.getIdentifier().equals(id1) && text2.getIdentifier().equals(id2)) ||
                 (text1.getIdentifier().equals(id2) && text2.getIdentifier().equals(id1));
+    }
+
+    /**
+     * Checks if text1 was the search sequence.
+     *
+     * @return true if text1 was search sequence, false if text2 was search sequence
+     */
+    public boolean isText1Search() {
+        return text1IsSearch;
     }
 }

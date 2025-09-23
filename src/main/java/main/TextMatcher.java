@@ -42,7 +42,9 @@ public class TextMatcher {
         commands.put("matches", new MatchesCommand(analyzeCommand));
         commands.put("clear", new ClearCommand(textManager));
         commands.put("edit", new EditCommand(analyzeCommand, scanner));
-        // TODO: Add other commands as they are implemented
+        commands.put("histogram", new HistogramCommand(analyzeCommand));
+        commands.put("top", new TopCommand(analyzeCommand));
+        commands.put("inspect", new InspectCommand(analyzeCommand, scanner));
     }
 
     /**

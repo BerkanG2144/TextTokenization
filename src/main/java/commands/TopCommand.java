@@ -9,35 +9,39 @@ import java.util.ArrayList;
 import java.util.Comparator;
 
 /**
- * Command to list similarity values for all text pairs.
- * Usage: list <metric> [order]
+ * Command to show the top N most similar text pairs.
+ * Usage: top <metric> <n>
  *
  * @author [Dein u-Kürzel]
  */
-public class ListCommand implements Command {
+public class TopCommand implements Command {
     private final AnalyzeCommand analyzeCommand;
 
     /**
-     * Creates a new ListCommand.
+     * Creates a new TopCommand.
      *
      * @param analyzeCommand reference to analyze command for results
      */
-    public ListCommand(AnalyzeCommand analyzeCommand) {
+    public TopCommand(AnalyzeCommand analyzeCommand) {
         this.analyzeCommand = analyzeCommand;
     }
 
     @Override
     public String execute(String[] args) throws CommandException {
-        if (args.length < 1 || args.length > 2) {
-            throw new CommandException("list command requires one or two arguments: list <metric> [order]");
+        if (args.length != 2) {
+            throw new CommandException("top command requires exactly two arguments: top <metric> <n>");
         }
 
         String metricName = args[0].toUpperCase();
-        String order = (args.length == 2) ? args[1].toUpperCase() : "DSC";
+        int topN;
 
-        // Validate order
-        if (!order.equals("ASC") && !order.equals("DSC")) {
-            throw new CommandException("Order must be ASC or DSC");
+        try {
+            topN = Integer.parseInt(args[1]);
+            if (topN <= 0) {
+                throw new CommandException("Number of results must be positive");
+            }
+        } catch (NumberFormatException e) {
+            throw new CommandException("Invalid number format for top N");
         }
 
         // Get metric
@@ -59,21 +63,41 @@ public class ListCommand implements Command {
             double value = metric.calculate(result);
             String formattedValue = metric.format(value);
 
-            // Format: searchText-patternText: value
-            // The search text is the longer sequence (or first text if same length)
-            String searchId = result.getSearchText().getIdentifier();
-            String patternId = result.getPatternText().getIdentifier();
-            String line = searchId + "-" + patternId + ": " + formattedValue;
+            String line = result.getText1().getIdentifier() + "-" +
+                    result.getText2().getIdentifier() + ": " + formattedValue;
 
-            entries.add(new SimilarityEntry(line, value, searchId, patternId));
+            entries.add(new SimilarityEntry(line, value,
+                    result.getText1().getIdentifier(),
+                    result.getText2().getIdentifier()));
         }
 
-        // Sort entries
-        sortEntries(entries, order);
+        // Sort by similarity value (descending), then by identifiers (ascending)
+        entries.sort(new Comparator<SimilarityEntry>() {
+            @Override
+            public int compare(SimilarityEntry e1, SimilarityEntry e2) {
+                // First by similarity value (descending)
+                int valueCompare = Double.compare(e2.value, e1.value);
+                if (valueCompare != 0) {
+                    return valueCompare;
+                }
+
+                // Then by first identifier (ascending)
+                int id1Compare = e1.id1.compareTo(e2.id1);
+                if (id1Compare != 0) {
+                    return id1Compare;
+                }
+
+                // Finally by second identifier (ascending)
+                return e1.id2.compareTo(e2.id2);
+            }
+        });
+
+        // Take only top N entries
+        int actualN = Math.min(topN, entries.size());
 
         // Build output
         StringBuilder output = new StringBuilder();
-        for (int i = 0; i < entries.size(); i++) {
+        for (int i = 0; i < actualN; i++) {
             if (i > 0) {
                 output.append("\n");
             }
@@ -83,41 +107,14 @@ public class ListCommand implements Command {
         return output.toString();
     }
 
-    /**
-     * Sorts similarity entries according to the specified order.
-     *
-     * @param entries the entries to sort
-     * @param order "ASC" or "DSC"
-     */
-    private void sortEntries(List<SimilarityEntry> entries, String order) {
-        Comparator<SimilarityEntry> comparator = (e1, e2) -> {
-            // First sort by similarity value
-            int valueCompare = Double.compare(e1.value, e2.value);
-            if (valueCompare != 0) {
-                return order.equals("ASC") ? valueCompare : -valueCompare;
-            }
-
-            // Then by first identifier (alphabetically ascending)
-            int id1Compare = e1.id1.compareTo(e2.id1);
-            if (id1Compare != 0) {
-                return id1Compare;
-            }
-
-            // Finally by second identifier (alphabetically ascending)
-            return e1.id2.compareTo(e2.id2);
-        };
-
-        entries.sort(comparator);
-    }
-
     @Override
     public String getName() {
-        return "list";
+        return "top";
     }
 
     @Override
     public String getUsage() {
-        return "list <metric> [order] - List similarity values for all text pairs";
+        return "top <metric> <n> - Show top N most similar text pairs";
     }
 
     /**
