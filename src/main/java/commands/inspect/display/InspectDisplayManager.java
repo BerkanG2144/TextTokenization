@@ -1,9 +1,9 @@
 package commands.inspect.display;
 
+import commands.inspect.InspectParameters;
 import core.Match;
 import core.Token;
 import matching.MatchResult;
-import commands.inspect.InspectParameters;
 
 import java.util.List;
 import java.util.Map;

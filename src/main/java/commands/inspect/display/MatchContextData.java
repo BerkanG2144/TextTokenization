@@ -2,6 +2,7 @@ package commands.inspect.display;
 
 import core.Match;
 import core.Token;
+
 import java.util.List;
 
 /**

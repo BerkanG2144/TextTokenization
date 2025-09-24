@@ -1,26 +1,19 @@
 package commands;
 
-import core.AnalysisResult;
-import core.TextManager;
-import core.Text;
-import core.Token;
-import core.Match;
-
+import core.*;
 import exceptions.CommandException;
 import exceptions.InvalidMatchException;
 import exceptions.TokenizationException;
 import matching.MatchResult;
 import matching.SequenceMatcher;
-
-import tokenization.SmartTokenizer;
 import tokenization.CharTokenizer;
-import tokenization.WordTokenizer;
+import tokenization.SmartTokenizer;
 import tokenization.TokenizationStrategy;
+import tokenization.WordTokenizer;
 
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
-
+import java.util.List;
 /**
  * Command to analyze all loaded texts for similarities.
  *

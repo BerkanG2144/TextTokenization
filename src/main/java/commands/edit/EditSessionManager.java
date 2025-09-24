@@ -1,16 +1,17 @@
 package commands.edit;
 
-import core.Match;
-import matching.MatchResult;
-import metrics.SimilarityMetric;
 import commands.AnalyzeCommand;
 import commands.edit.handlers.EditCommandHandler;
+import core.Match;
 import exceptions.CommandException;
 import exceptions.InvalidMatchException;
 import exceptions.InvalidMetricException;
+import exceptions.QuitCommandException;
+import matching.MatchResult;
+import metrics.SimilarityMetric;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -41,8 +42,9 @@ public class EditSessionManager {
      * @param result match result to edit
      * @param id1 first text identifier
      * @param id2 second text identifier
+     * @throws QuitCommandException if quit command is issued
      */
-    public void startEditSession(MatchResult result, String id1, String id2) {
+    public void startEditSession(MatchResult result, String id1, String id2) throws QuitCommandException {
         List<Match> matches = new ArrayList<>(result.getMatches());
         SimilarityMetric currentMetric = new metrics.SymmetricSimilarity();
         printEditState(result, matches, currentMetric, id1, id2);
@@ -60,6 +62,10 @@ public class EditSessionManager {
                 if ("exit".equals(command)) {
                     updateAnalysisResult(result, matches, id1, id2);
                     break;
+                } else if ("quit".equals(command)) {
+                    // Handle quit command - should terminate the entire application
+                    updateAnalysisResult(result, matches, id1, id2);
+                    throw new QuitCommandException();
                 } else if ("matches".equals(command)) {
                     commandHandler.printMatches(matches, result, id1, id2);
                 } else if ("print".equals(command)) {
@@ -76,14 +82,19 @@ public class EditSessionManager {
                     currentMetric = commandHandler.handleSetCommand(parts);
                 } else {
                     System.out.println("ERROR: Unknown command in edit mode: " + command);
-                    continue;
+                    continue; // Don't print edit state for unknown commands
                 }
 
-                if (!"exit".equals(command)) {
+                // Only print edit state if command was valid and not exit/quit
+                if (!"exit".equals(command) && !"quit".equals(command)) {
                     printEditState(result, matches, currentMetric, id1, id2);
                 }
 
             } catch (CommandException | InvalidMatchException | InvalidMetricException e) {
+                // Don't handle QuitCommandException here - let it propagate
+                if (e instanceof QuitCommandException) {
+                    throw (QuitCommandException) e;
+                }
                 System.out.println(e.getMessage());
                 printEditState(result, matches, currentMetric, id1, id2);
             }

@@ -23,7 +23,7 @@ public class InvalidMatchException extends Exception {
      * @return new InvalidMatchException instance
      */
     public static InvalidMatchException forOverlap(String matchDescription) {
-        return new InvalidMatchException("Match " + matchDescription + " would overlap with existing match");
+        return new InvalidMatchException("Error, " + matchDescription);
     }
 
     /**

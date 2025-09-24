@@ -3,11 +3,12 @@ package commands;
 import core.AnalysisResult;
 import exceptions.CommandException;
 import matching.MatchResult;
-import metrics.SimilarityMetric;
 import metrics.MetricFactory;
-import java.util.List;
+import metrics.SimilarityMetric;
+
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * Command to list similarity values for all text pairs.
@@ -89,18 +90,19 @@ public class ListCommand implements Command {
      * @param order "ASC" or "DSC"
      */
     private void sortEntries(List<SimilarityEntry> entries, String order) {
-        Comparator<SimilarityEntry> comparator = Comparator
-                .comparingDouble((SimilarityEntry e) -> e.value)
-                .thenComparing(e -> e.id1)
-                .thenComparing(e -> e.id2);
-
-        if (order.equals("DSC")) {
-            comparator = comparator.reversed()
+        if (order.equals("ASC")) {
+            // Ascending order: value ascending, then id1 ascending, then id2 ascending
+            entries.sort(Comparator
+                    .comparingDouble((SimilarityEntry e) -> e.value)
                     .thenComparing(e -> e.id1)
-                    .thenComparing(e -> e.id2);
+                    .thenComparing(e -> e.id2));
+        } else { // DSC
+            // Descending order: value descending, but still id1 ascending, then id2 ascending for ties
+            entries.sort(Comparator
+                    .comparingDouble((SimilarityEntry e) -> -e.value)  // Negative for descending value
+                    .thenComparing(e -> e.id1)  // Always ascending for identifiers
+                    .thenComparing(e -> e.id2)); // Always ascending for identifiers
         }
-
-        entries.sort(comparator);
     }
 
     @Override

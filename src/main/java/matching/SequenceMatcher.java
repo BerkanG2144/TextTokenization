@@ -4,10 +4,10 @@ import core.Match;
 import core.Token;
 import exceptions.InvalidMatchException;
 
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Implements the greedy sequence matching algorithm.
@@ -31,10 +31,10 @@ public class SequenceMatcher {
             throws InvalidMatchException {
 
         if (sequence1 == null || sequence2 == null) {
-            throw new InvalidMatchException("ERROR: Sequences cannot be null");
+            throw new InvalidMatchException("ERROR, Sequences cannot be null");
         }
         if (minMatchLength <= 0) {
-            throw new InvalidMatchException("ERROR: Minimum match length must be positive");
+            throw new InvalidMatchException("ERROR, Minimum match length must be positive");
         }
 
         // Determine search sequence (longer) and pattern sequence (shorter)

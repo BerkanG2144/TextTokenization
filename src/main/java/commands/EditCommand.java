@@ -1,11 +1,12 @@
 package commands;
 
+import commands.edit.EditSessionManager;
 import core.AnalysisResult;
-import exceptions.CommandException;
 import exceptions.AnalysisNotPerformedException;
+import exceptions.CommandException;
+import exceptions.QuitCommandException;
 import exceptions.TextNotFoundException;
 import matching.MatchResult;
-import commands.edit.EditSessionManager;
 
 import java.util.Scanner;
 
@@ -35,7 +36,7 @@ public class EditCommand implements Command {
     public String execute(String[] args)
             throws CommandException, TextNotFoundException, AnalysisNotPerformedException {
         if (args.length != 2) {
-            throw new CommandException("ERROR: edit command requires exactly two arguments: edit <id> <id>");
+            throw new CommandException("edit command requires exactly two arguments: edit <id> <id>");
         }
 
         String id1 = args[0];
@@ -49,11 +50,16 @@ public class EditCommand implements Command {
         MatchResult result = analysisResult.getResult(id1, id2);
         if (result == null) {
             throw new TextNotFoundException(id1 + "/" + id2,
-                    "ERROR: No comparison found for texts '" + id1 + "' and '" + id2 + "'");
+                    "No comparison found for texts '" + id1 + "' and '" + id2 + "'");
         }
 
-        sessionManager.startEditSession(result, id1, id2);
-        return "OK, exit editing mode.";
+        try {
+            sessionManager.startEditSession(result, id1, id2);
+            return "OK, exit editing mode.";
+        } catch (QuitCommandException e) {
+            // Re-throw the quit exception so it can be handled by the main loop
+            throw e;
+        }
     }
 
     @Override

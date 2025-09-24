@@ -2,8 +2,9 @@ package matching;
 
 import core.Match;
 import core.Text;
-import java.util.List;
+
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Container for the results of matching two texts.

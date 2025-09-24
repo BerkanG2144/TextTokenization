@@ -1,16 +1,16 @@
 package commands.edit.handlers;
 
 import core.Match;
-import matching.MatchResult;
-import metrics.SimilarityMetric;
-import metrics.MetricFactory;
 import exceptions.CommandException;
 import exceptions.InvalidMatchException;
 import exceptions.InvalidMetricException;
+import matching.MatchResult;
+import metrics.MetricFactory;
+import metrics.SimilarityMetric;
 
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * Handles individual edit commands and operations.
@@ -294,28 +294,63 @@ public class EditCommandHandler {
             int startChar2 = secondSeq.get(secondPos).getStartPosition();
             int endChar2 = secondSeq.get(Math.min(secondPos + match.length() - 1, secondSeq.size() - 1)).getEndPosition();
 
-            String context1 = extractContext(firstText, startChar1, endChar1, contextSize);
-            String context2 = extractContext(secondText, startChar2, endChar2, contextSize);
+            int contextStart1 = Math.max(0, startChar1 - contextSize);
+            int contextEnd1 = Math.min(firstText.length(), endChar1 + contextSize);
+            int contextStart2 = Math.max(0, startChar2 - contextSize);
+            int contextEnd2 = Math.min(secondText.length(), endChar2 + contextSize);
 
-            System.out.println(context1);
-            System.out.println("^".repeat(endChar1 - startChar1));
-            System.out.println(context2);
-            System.out.println("^".repeat(endChar2 - startChar2));
+            int prefix1Length = startChar1 - contextStart1;
+            int prefix2Length = startChar2 - contextStart2;
+
+            boolean ellipsis1Before = contextStart1 > 0;
+            boolean ellipsis1After = contextEnd1 < firstText.length();
+            boolean ellipsis2Before = contextStart2 > 0;
+            boolean ellipsis2After = contextEnd2 < secondText.length();
+            if (ellipsis1Before) {
+                prefix1Length += 3; // for "..."
+            }
+            if (ellipsis2Before) {
+                prefix2Length += 3; // for "..."
+            }
+            String context1 = buildContext(firstText, contextStart1, contextEnd1, ellipsis1Before, ellipsis1After);
+            String context2 = buildContext(secondText, contextStart2, contextEnd2, ellipsis2Before, ellipsis2After);
+
+            int alignmentSpaces1 = Math.max(0, prefix2Length - prefix1Length);
+            int alignmentSpaces2 = Math.max(0, prefix1Length - prefix2Length);
+
+            System.out.println(" ".repeat(alignmentSpaces1) + context1);
+            printUnderline(startChar1, endChar1, prefix1Length + alignmentSpaces1);
+            System.out.println(" ".repeat(alignmentSpaces2) + context2);
+            printUnderline(startChar2, endChar2, prefix2Length + alignmentSpaces2);
         }
     }
 
-    private String extractContext(String text, int start, int end, int contextSize) {
-        int contextStart = Math.max(0, start - contextSize);
-        int contextEnd = Math.min(text.length(), end + contextSize);
+    private String buildContext(String text, int contextStart, int contextEnd, boolean ellipsisBefore, boolean ellipsisAfter) {
         StringBuilder result = new StringBuilder();
-        if (contextStart > 0) {
+
+        if (ellipsisBefore) {
             result.append("...");
         }
+
         result.append(text, contextStart, contextEnd);
-        if (contextEnd < text.length()) {
+
+        if (ellipsisAfter) {
             result.append("...");
         }
+
         return result.toString();
+    }
+
+    private void printUnderline(int startChar, int endChar, int prefixLength) {
+        StringBuilder underline = new StringBuilder();
+
+        for (int i = 0; i < prefixLength; i++) {
+            underline.append(" ");
+        }
+
+        underline.append("^".repeat(endChar - startChar));
+
+        System.out.println(underline.toString());
     }
 
     private Match createExtendedMatch(Match oldMatch, int len) throws CommandException {
@@ -358,7 +393,7 @@ public class EditCommandHandler {
             throws InvalidMatchException {
         for (int i = 0; i < matches.size(); i++) {
             if (i != excludeIndex && newMatch.overlapsWith(matches.get(i))) {
-                throw InvalidMatchException.forOverlap("ERROR: extended match overlaps with another match");
+                throw InvalidMatchException.forOverlap("extended match overlaps with another match");
             }
         }
     }

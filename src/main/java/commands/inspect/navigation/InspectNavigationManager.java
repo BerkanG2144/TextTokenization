@@ -1,8 +1,8 @@
 package commands.inspect.navigation;
 
-import core.Match;
 import commands.inspect.InspectState;
 import commands.inspect.InspectionAction;
+import core.Match;
 
 import java.util.List;
 import java.util.Set;
@@ -34,11 +34,12 @@ public class InspectNavigationManager {
     /**
      * Handles the continue command.
      *
+     * @param currentIndex current match index
      * @param state current inspection state
      * @return action to take
      */
-    public InspectionAction handleContinueCommand(InspectState state) {
-        int nextIndex = findNextUntreatedWrap(-1, state.getSortedMatches(), state.getTreatedMatches());
+    public InspectionAction handleContinueCommand(int currentIndex, InspectState state) {
+        int nextIndex = findNextUntreatedWrap(currentIndex, state.getSortedMatches(), state.getTreatedMatches());
         if (nextIndex == -1) {
             return InspectionAction.exit();
         }
@@ -48,11 +49,12 @@ public class InspectNavigationManager {
     /**
      * Handles the previous command.
      *
+     * @param currentIndex current match index
      * @param state current inspection state
      * @return action to take
      */
-    public InspectionAction handlePreviousCommand(InspectState state) {
-        int prevIndex = findPrevUntreatedWrap(-1, state.getSortedMatches(), state.getTreatedMatches());
+    public InspectionAction handlePreviousCommand(int currentIndex, InspectState state) {
+        int prevIndex = findPrevUntreatedWrap(currentIndex, state.getSortedMatches(), state.getTreatedMatches());
         if (prevIndex == -1) {
             System.out.println("No previous untreated matches.");
             return InspectionAction.stay();
@@ -65,10 +67,11 @@ public class InspectNavigationManager {
      *
      * @param input user input command
      * @param currentMatch current match being processed
+     * @param currentIndex current match index
      * @param state current inspection state
      * @return action to take
      */
-    public InspectionAction handleDecisionCommand(String input, Match currentMatch, InspectState state) {
+    public InspectionAction handleDecisionCommand(String input, Match currentMatch, int currentIndex, InspectState state) {
         String decision = getDecisionText(input);
         state.getDecisions().put(currentMatch, decision);
         state.getTreatedMatches().add(currentMatch);
@@ -77,7 +80,7 @@ public class InspectNavigationManager {
             state.getModifiedMatches().removeIf(m -> m.equals(currentMatch));
         }
 
-        int nextIndex = findNextUntreatedWrap(-1, state.getSortedMatches(), state.getTreatedMatches());
+        int nextIndex = findNextUntreatedWrap(currentIndex, state.getSortedMatches(), state.getTreatedMatches());
         if (nextIndex == -1) {
             return InspectionAction.exit();
         }

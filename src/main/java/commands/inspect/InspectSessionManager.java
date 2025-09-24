@@ -1,18 +1,13 @@
 package commands.inspect;
 
-import core.Match;
-import matching.MatchResult;
 import commands.AnalyzeCommand;
 import commands.inspect.display.InspectDisplayManager;
 import commands.inspect.navigation.InspectNavigationManager;
+import core.Match;
+import exceptions.CommandException;
+import matching.MatchResult;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Manages the inspection session workflow.
@@ -40,9 +35,10 @@ public class InspectSessionManager {
      * @param params inspection parameters
      * @param scanner input scanner
      * @param analyzeCommand reference for updating results
+     * @throws CommandException for invalid input.
      */
     public void startInspectSession(MatchResult result, InspectParameters params,
-                                    Scanner scanner, AnalyzeCommand analyzeCommand) {
+                                    Scanner scanner, AnalyzeCommand analyzeCommand) throws CommandException {
         InspectState state = initializeState(result, params);
 
         if (state.getSortedMatches().isEmpty()) {
@@ -117,7 +113,7 @@ public class InspectSessionManager {
      */
     private void runInspectionLoop(MatchResult result, InspectParameters params,
                                    InspectState state, int startIndex, Scanner scanner,
-                                   AnalyzeCommand analyzeCommand) {
+                                   AnalyzeCommand analyzeCommand) throws CommandException {
         int currentIndex = startIndex;
 
         while (true) {
@@ -129,7 +125,7 @@ public class InspectSessionManager {
                 input = "C";
             }
 
-            InspectionAction action = handleUserInput(input, currentMatch, state);
+            InspectionAction action = handleUserInput(input, currentMatch, currentIndex, state);
 
             if (action.shouldExit()) {
                 updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
@@ -145,18 +141,20 @@ public class InspectSessionManager {
     /**
      * Handles user input and returns the action to take.
      */
-    private InspectionAction handleUserInput(String input, Match currentMatch, InspectState state) {
+    private InspectionAction handleUserInput(
+            String input, Match currentMatch, int currentIndex, InspectState state
+    ) throws CommandException {
         return switch (input) {
-            case "C" -> navigationManager.handleContinueCommand(state);
-            case "P" -> navigationManager.handlePreviousCommand(state);
-            case "A", "I", "X" -> navigationManager.handleDecisionCommand(input, currentMatch, state);
+            case "C" -> navigationManager.handleContinueCommand(currentIndex, state);
+            case "P" -> navigationManager.handlePreviousCommand(currentIndex, state);
+            case "A", "I", "X" -> navigationManager.handleDecisionCommand(input, currentMatch, currentIndex, state);
             case "B" -> InspectionAction.exit();
             default -> {
-                System.out.println("Invalid command. Use C, P, A, I, X, or B.");
-                yield InspectionAction.stay();
+                throw new CommandException("ERROR: Invalid command. Use C, P, A, I, X, or B.");
             }
         };
     }
+
 
     /**
      * Updates the analysis result with modified matches.

@@ -1,13 +1,13 @@
 package commands;
 
-import core.AnalysisResult;
-import exceptions.CommandException;
-import exceptions.AnalysisNotPerformedException;
-import exceptions.TextNotFoundException;
-import matching.MatchResult;
+import commands.inspect.InspectArgumentParser;
 import commands.inspect.InspectParameters;
 import commands.inspect.InspectSessionManager;
-import commands.inspect.InspectArgumentParser;
+import core.AnalysisResult;
+import exceptions.AnalysisNotPerformedException;
+import exceptions.CommandException;
+import exceptions.TextNotFoundException;
+import matching.MatchResult;
 
 import java.util.Scanner;
 

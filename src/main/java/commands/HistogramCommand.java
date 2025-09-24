@@ -3,8 +3,8 @@ package commands;
 import core.AnalysisResult;
 import exceptions.CommandException;
 import matching.MatchResult;
-import metrics.SimilarityMetric;
 import metrics.MetricFactory;
+import metrics.SimilarityMetric;
 
 /**
  * Command to display a histogram of similarity values.

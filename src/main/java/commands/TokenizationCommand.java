@@ -5,9 +5,9 @@ import core.TextManager;
 import core.Token;
 import exceptions.CommandException;
 import exceptions.TokenizationException;
+import tokenization.CharTokenizer;
 import tokenization.SmartTokenizer;
 import tokenization.TokenizationStrategy;
-import tokenization.CharTokenizer;
 import tokenization.WordTokenizer;
 
 import java.util.List;

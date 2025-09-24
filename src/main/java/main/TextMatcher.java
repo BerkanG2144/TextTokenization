@@ -1,22 +1,9 @@
 package main;
 
-import commands.Command;
-import commands.AnalyzeCommand;
-import commands.LoadCommand;
-import commands.MatchesCommand;
-import commands.InputCommand;
-import commands.InspectCommand;
-import commands.EditCommand;
-import commands.TokenizationCommand;
-import commands.ListCommand;
-import commands.ClearCommand;
-import commands.TopCommand;
-import commands.HistogramCommand;
-
+import commands.*;
+import core.TextManager;
 import exceptions.AnalysisNotPerformedException;
 import exceptions.CommandException;
-
-import core.TextManager;
 import exceptions.InvalidMatchException;
 import exceptions.TextNotFoundException;
 
@@ -72,7 +59,6 @@ public class TextMatcher {
         System.out.println("Use one of the following commands: "
                 + "load, input, tokenization, analyze, clear, list, top, matches, histogram, edit, inspect, quit.");
         while (true) {
-            System.out.print("> ");
             String inputLine = scanner.nextLine().trim();
             if (inputLine.isEmpty()) {
                 continue;
@@ -100,10 +86,28 @@ public class TextMatcher {
                     System.out.println(result);
                 }
 
-            } catch (CommandException | TextNotFoundException | AnalysisNotPerformedException | InvalidMatchException e) {
-                System.out.println(e.getMessage().startsWith("ERROR:")
-                        ? e.getMessage()
-                        : "ERROR: " + e.getMessage());
+            } catch (CommandException e) {
+                // Check if this is a quit request from within a special mode
+                if (e instanceof exceptions.QuitCommandException) {
+                    break; // Exit the application silently
+                }
+                // Handle regular command exceptions
+                String message = e.getMessage();
+                // Don't print empty messages
+                if (message != null && !message.trim().isEmpty()) {
+                    if (!message.startsWith("ERROR:")) {
+                        System.out.println("ERROR: " + message);
+                    } else {
+                        System.out.println(message);
+                    }
+                }
+            } catch (TextNotFoundException | AnalysisNotPerformedException | InvalidMatchException e) {
+                String message = e.getMessage();
+                if (!message.startsWith("ERROR:")) {
+                    System.out.println("ERROR: " + message);
+                } else {
+                    System.out.println(message);
+                }
             }
         }
     }

@@ -3,11 +3,12 @@ package commands;
 import core.AnalysisResult;
 import exceptions.CommandException;
 import matching.MatchResult;
-import metrics.SimilarityMetric;
 import metrics.MetricFactory;
-import java.util.List;
+import metrics.SimilarityMetric;
+
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * Command to show the top N most similar text pairs.
@@ -29,22 +30,24 @@ public class TopCommand implements Command {
     @Override
     public String execute(String[] args) throws CommandException {
         if (args.length != 2) {
-            throw new CommandException("top command requires exactly two arguments: top <metric> <n>");
+            throw new CommandException("top command requires exactly two arguments: top <n> <metric>");
         }
-        String metricName = args[0].toUpperCase();
         int topN;
         try {
-            topN = Integer.parseInt(args[1]);
+            topN = Integer.parseInt(args[0]); // First argument is N
             if (topN <= 0) {
                 throw new CommandException("Number of results must be positive");
             }
         } catch (NumberFormatException e) {
             throw new CommandException("Invalid number format for top N");
         }
+
+        String metricName = args[1].toUpperCase(); // Second argument is metric
         SimilarityMetric metric = MetricFactory.createMetric(metricName);
         if (metric == null) {
             throw new CommandException("Unknown metric: " + metricName + ". Available metrics: AVG, MAX, MIN, LEN, LONG");
         }
+
         AnalysisResult analysisResult = analyzeCommand.getLastAnalysisResult();
         if (analysisResult == null) {
             throw new CommandException("No analysis results available. Run analyze command first.");

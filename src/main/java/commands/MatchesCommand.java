@@ -5,9 +5,9 @@ import core.Match;
 import exceptions.CommandException;
 import matching.MatchResult;
 
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * Command to list matches for a specific text pair.

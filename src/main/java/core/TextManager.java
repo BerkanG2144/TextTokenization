@@ -1,9 +1,10 @@
 package core;
 
 import exceptions.CommandException;
+
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Collection;
 
 /**
  * Central manager for all loaded texts in the application.
