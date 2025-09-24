@@ -7,6 +7,7 @@ import core.Token;
 import core.Match;
 
 import exceptions.CommandException;
+import exceptions.InvalidMatchException;
 import matching.MatchResult;
 import matching.SequenceMatcher;
 
@@ -38,7 +39,7 @@ public class AnalyzeCommand implements Command {
     }
 
     @Override
-    public String execute(String[] args) throws CommandException {
+    public String execute(String[] args) throws CommandException, InvalidMatchException {
         if (args.length != 2) {
             throw new CommandException("analyze command requires exactly two arguments: analyze <strategy> <minMatchLength>");
         }
@@ -85,7 +86,7 @@ public class AnalyzeCommand implements Command {
      * @param minMatchLength the minimum match length
      * @return list of match results for all pairs
      */
-    private List<MatchResult> analyzeAllPairs(TokenizationStrategy strategy, int minMatchLength) {
+    private List<MatchResult> analyzeAllPairs(TokenizationStrategy strategy, int minMatchLength) throws InvalidMatchException {
         List<MatchResult> results = new ArrayList<>();
         List<Text> texts = new ArrayList<>(textManager.getAllTexts());
 

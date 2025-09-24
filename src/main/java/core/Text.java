@@ -4,6 +4,8 @@ package core;
  * Represents a text with an identifier and content.
  * Texts can be loaded from files or input via console.
  *
+ * @param identifier the unique identifier for this text
+ * @param content    the actual text content
  * @author ujnaa
  */
 public record Text(String identifier, String content) {
@@ -20,7 +22,6 @@ public record Text(String identifier, String content) {
         if (content == null) {
             throw new IllegalArgumentException("Content cannot be null");
         }
-
     }
 
     /**

@@ -3,8 +3,8 @@ package commands;
 import core.Text;
 import core.TextManager;
 import exceptions.CommandException;
+import exceptions.FileOperationException;
 import utils.FileUtils;
-import java.io.IOException;
 
 /**
  * Command to load text from a file.
@@ -44,8 +44,8 @@ public class LoadCommand implements Command {
                 return "Loaded " + identifier;
             }
 
-        } catch (IOException e) {
-            throw new CommandException("Failed to read file: " + e.getMessage());
+        } catch (FileOperationException e) {
+            throw new CommandException(e.getMessage(), e);
         }
     }
 

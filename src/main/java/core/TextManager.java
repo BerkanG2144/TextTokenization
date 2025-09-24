@@ -1,5 +1,6 @@
 package core;
 
+import exceptions.CommandException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Collection;
@@ -25,10 +26,11 @@ public class TextManager {
      *
      * @param text the text to add
      * @return true if this was an update (text with same ID existed), false if new
+     * @throws CommandException if the text is null
      */
-    public boolean addText(Text text) {
+    public boolean addText(Text text) throws CommandException {
         if (text == null) {
-            throw new IllegalArgumentException("Text cannot be null");
+            throw new CommandException("ERROR: Text cannot be null");
         }
 
         boolean wasUpdate = texts.containsKey(text.identifier());

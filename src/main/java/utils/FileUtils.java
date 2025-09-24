@@ -1,5 +1,7 @@
 package utils;
 
+import exceptions.FileOperationException;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,25 +24,30 @@ public final class FileUtils {
      *
      * @param filePath the path to the file
      * @return the file content as string
-     * @throws IOException if the file cannot be read
+     * @throws FileOperationException if the file cannot be read
      */
-    public static String readFile(String filePath) throws IOException {
+    public static String readFile(String filePath) throws FileOperationException {
         if (filePath == null || filePath.trim().isEmpty()) {
-            throw new IllegalArgumentException("File path cannot be null or empty");
+            throw new FileOperationException("<unknown>", "read", "File path cannot be null or empty");
         }
 
         Path path = Paths.get(filePath);
 
         if (!Files.exists(path)) {
-            throw new IOException("File does not exist: " + filePath);
+            throw new FileOperationException(filePath, "read", "File does not exist");
         }
 
         if (!Files.isRegularFile(path)) {
-            throw new IOException("Path is not a regular file: " + filePath);
+            throw new FileOperationException(filePath, "read", "Path is not a regular file");
         }
 
-        return Files.readString(path, StandardCharsets.UTF_8);
+        try {
+            return Files.readString(path, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new FileOperationException(filePath, "read", e);
+        }
     }
+
 
     /**
      * Extracts the filename from a file path.
@@ -55,24 +62,5 @@ public final class FileUtils {
 
         Path path = Paths.get(filePath);
         return path.getFileName().toString();
-    }
-
-    /**
-     * Checks if a file exists and is readable.
-     *
-     * @param filePath the path to check
-     * @return true if the file exists and is readable
-     */
-    public static boolean isReadableFile(String filePath) {
-        if (filePath == null) {
-            return false;
-        }
-
-        try {
-            Path path = Paths.get(filePath);
-            return Files.exists(path) && Files.isRegularFile(path) && Files.isReadable(path);
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

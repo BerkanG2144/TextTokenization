@@ -2,6 +2,8 @@ package matching;
 
 import core.Match;
 import core.Token;
+import exceptions.InvalidMatchException;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -11,7 +13,7 @@ import java.util.HashSet;
  * Implements the greedy sequence matching algorithm.
  * Finds matching subsequences between two token sequences.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class SequenceMatcher {
 
@@ -23,13 +25,16 @@ public class SequenceMatcher {
      * @param sequence2 the second token sequence
      * @param minMatchLength minimum length for matches (MML)
      * @return list of found matches with positions relative to sequence1 and sequence2
+     * @throws InvalidMatchException if input sequences are null or minMatchLength <= 0
      */
-    public List<Match> findMatches(List<Token> sequence1, List<Token> sequence2, int minMatchLength) {
+    public List<Match> findMatches(List<Token> sequence1, List<Token> sequence2, int minMatchLength)
+            throws InvalidMatchException {
+
         if (sequence1 == null || sequence2 == null) {
-            throw new IllegalArgumentException("Sequences cannot be null");
+            throw new InvalidMatchException("ERROR: Sequences cannot be null");
         }
         if (minMatchLength <= 0) {
-            throw new IllegalArgumentException("Minimum match length must be positive");
+            throw new InvalidMatchException("ERROR: Minimum match length must be positive");
         }
 
         // Determine search sequence (longer) and pattern sequence (shorter)
@@ -58,9 +63,13 @@ public class SequenceMatcher {
         List<Match> finalMatches = new ArrayList<>();
         for (Match rawMatch : rawMatches) {
             if (seq1IsSearch) {
-                finalMatches.add(new Match(rawMatch.startPosSequence1(), rawMatch.startPosSequence2(), rawMatch.length()));
+                finalMatches.add(new Match(rawMatch.startPosSequence1(),
+                        rawMatch.startPosSequence2(),
+                        rawMatch.length()));
             } else {
-                finalMatches.add(new Match(rawMatch.startPosSequence2(), rawMatch.startPosSequence1(), rawMatch.length()));
+                finalMatches.add(new Match(rawMatch.startPosSequence2(),
+                        rawMatch.startPosSequence1(),
+                        rawMatch.length()));
             }
         }
 
@@ -70,7 +79,9 @@ public class SequenceMatcher {
     /**
      * Internal method that finds raw matches between search and pattern sequences.
      */
-    private List<Match> findRawMatches(List<Token> searchSequence, List<Token> patternSequence, int minMatchLength) {
+    private List<Match> findRawMatches(List<Token> searchSequence,
+                                       List<Token> patternSequence,
+                                       int minMatchLength) {
         List<Match> matches = new ArrayList<>();
         Set<Integer> excludedFromSearch = new HashSet<>();
         Set<Integer> excludedFromPattern = new HashSet<>();

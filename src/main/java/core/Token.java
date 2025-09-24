@@ -1,5 +1,7 @@
 package core;
 
+import exceptions.TokenizationException;
+
 /**
  * Represents a single token in a text sequence.
  * Tokens are the smallest unit for text comparison.
@@ -17,13 +19,15 @@ public class Token {
      * @param value the string value of this token
      * @param startPosition the start position in the original text
      * @param endPosition the end position in the original text
+     * @throws TokenizationException if the value is null or the positions are invalid
      */
-    public Token(String value, int startPosition, int endPosition) {
+    public Token(String value, int startPosition, int endPosition) throws TokenizationException {
         if (value == null) {
-            throw new IllegalArgumentException("Token value cannot be null");
+            throw new TokenizationException("ERROR: Token value cannot be null");
         }
         if (startPosition < 0 || endPosition < startPosition) {
-            throw new IllegalArgumentException("Invalid position values");
+            throw new TokenizationException("ERROR: Invalid token position values (start="
+                    + startPosition + ", end=" + endPosition + ")");
         }
 
         this.value = value;
@@ -35,9 +39,10 @@ public class Token {
      * Creates a new Token with only the value (for testing purposes).
      *
      * @param value the string value of this token
+     * @throws TokenizationException if the value is null
      */
-    public Token(String value) {
-        this(value, 0, value.length());
+    public Token(String value) throws TokenizationException {
+        this(value, 0, value != null ? value.length() : 0);
     }
 
     /**

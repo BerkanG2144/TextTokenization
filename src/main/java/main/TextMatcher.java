@@ -13,9 +13,12 @@ import commands.ClearCommand;
 import commands.TopCommand;
 import commands.HistogramCommand;
 
+import exceptions.AnalysisNotPerformedException;
 import exceptions.CommandException;
 
 import core.TextManager;
+import exceptions.TextNotFoundException;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -96,11 +99,8 @@ public class TextMatcher {
                     System.out.println(result);
                 }
 
-            } catch (CommandException e) {
+            } catch (CommandException | TextNotFoundException | AnalysisNotPerformedException e) {
                 System.out.println("ERROR: " + e.getMessage());
-            } catch (Exception e) {
-                System.out.println("ERROR: Unexpected error: " + e.getMessage());
-                e.printStackTrace();
             }
         }
     }
