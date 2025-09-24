@@ -17,6 +17,7 @@ import exceptions.AnalysisNotPerformedException;
 import exceptions.CommandException;
 
 import core.TextManager;
+import exceptions.InvalidMatchException;
 import exceptions.TextNotFoundException;
 
 import java.util.HashMap;
@@ -99,11 +100,14 @@ public class TextMatcher {
                     System.out.println(result);
                 }
 
-            } catch (CommandException | TextNotFoundException | AnalysisNotPerformedException e) {
-                System.out.println("ERROR: " + e.getMessage());
+            } catch (CommandException | TextNotFoundException | AnalysisNotPerformedException | InvalidMatchException e) {
+                System.out.println(e.getMessage().startsWith("ERROR:")
+                        ? e.getMessage()
+                        : "ERROR: " + e.getMessage());
             }
         }
     }
+
 
     /**
      * Parses a command line into command and arguments.
