@@ -1,6 +1,20 @@
 package main;
 
-import commands.*;
+import commands.Command;
+import commands.AnalyzeCommand;
+import commands.LoadCommand;
+import commands.MatchesCommand;
+import commands.InputCommand;
+import commands.InspectCommand;
+import commands.EditCommand;
+import commands.TokenizationCommand;
+import commands.ListCommand;
+import commands.ClearCommand;
+import commands.TopCommand;
+import commands.HistogramCommand;
+
+import exceptions.CommandException;
+
 import core.TextManager;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,7 +24,7 @@ import java.util.Scanner;
  * Main class for the Text Matcher application.
  * Provides command-line interface for text sequence matching.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class TextMatcher {
     private final TextManager textManager;
@@ -51,12 +65,11 @@ public class TextMatcher {
      * Starts the interactive command loop.
      */
     public void run() {
-        System.out.println("Use one of the following commands: load, input, tokenization, analyze, clear, list, top, matches, histogram, edit, inspect, quit.");
-
+        System.out.println("Use one of the following commands: "
+                + "load, input, tokenization, analyze, clear, list, top, matches, histogram, edit, inspect, quit.");
         while (true) {
             System.out.print("> ");
             String inputLine = scanner.nextLine().trim();
-
             if (inputLine.isEmpty()) {
                 continue;
             }

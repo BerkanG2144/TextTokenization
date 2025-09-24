@@ -58,9 +58,9 @@ public class SequenceMatcher {
         List<Match> finalMatches = new ArrayList<>();
         for (Match rawMatch : rawMatches) {
             if (seq1IsSearch) {
-                finalMatches.add(new Match(rawMatch.getStartPosSequence1(), rawMatch.getStartPosSequence2(), rawMatch.getLength()));
+                finalMatches.add(new Match(rawMatch.startPosSequence1(), rawMatch.startPosSequence2(), rawMatch.length()));
             } else {
-                finalMatches.add(new Match(rawMatch.getStartPosSequence2(), rawMatch.getStartPosSequence1(), rawMatch.getLength()));
+                finalMatches.add(new Match(rawMatch.startPosSequence2(), rawMatch.startPosSequence1(), rawMatch.length()));
             }
         }
 

@@ -1,9 +1,11 @@
 package commands;
 
+import exceptions.CommandException;
+
 /**
  * Interface for all commands in the text matcher application.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public interface Command {
 

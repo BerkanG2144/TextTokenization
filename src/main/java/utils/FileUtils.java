@@ -9,9 +9,13 @@ import java.nio.file.Paths;
 /**
  * Utility class for file operations.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
-public class FileUtils {
+public final class FileUtils {
+
+    private FileUtils() {
+        //
+    }
 
     /**
      * Reads the content of a file as UTF-8 encoded text.

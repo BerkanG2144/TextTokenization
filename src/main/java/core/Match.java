@@ -4,28 +4,25 @@ package core;
  * Represents a match between two token sequences.
  * A match consists of a start position in each sequence and a length.
  *
- * @author [Dein u-Kürzel]
+ * @param startPosSequence1 start position in the first sequence
+ * @param startPosSequence2 start position in the second sequence
+ * @param length            the length of the match in tokens
+ *
+ * @author ujnaa
  */
-public class Match {
-    private final int startPosSequence1;
-    private final int startPosSequence2;
-    private final int length;
-
+public record Match(int startPosSequence1, int startPosSequence2, int length) {
     /**
      * Creates a new Match.
      *
      * @param startPosSequence1 start position in the first sequence
      * @param startPosSequence2 start position in the second sequence
-     * @param length the length of the match in tokens
+     * @param length            the length of the match in tokens
      */
-    public Match(int startPosSequence1, int startPosSequence2, int length) {
+    public Match {
         if (startPosSequence1 < 0 || startPosSequence2 < 0 || length <= 0) {
             throw new IllegalArgumentException("Invalid match parameters");
         }
 
-        this.startPosSequence1 = startPosSequence1;
-        this.startPosSequence2 = startPosSequence2;
-        this.length = length;
     }
 
     /**
@@ -33,7 +30,8 @@ public class Match {
      *
      * @return the start position in sequence 1
      */
-    public int getStartPosSequence1() {
+    @Override
+    public int startPosSequence1() {
         return startPosSequence1;
     }
 
@@ -42,7 +40,8 @@ public class Match {
      *
      * @return the start position in sequence 2
      */
-    public int getStartPosSequence2() {
+    @Override
+    public int startPosSequence2() {
         return startPosSequence2;
     }
 
@@ -51,7 +50,8 @@ public class Match {
      *
      * @return the match length
      */
-    public int getLength() {
+    @Override
+    public int length() {
         return length;
     }
 
@@ -80,8 +80,8 @@ public class Match {
      * @return true if there is an overlap in sequence 1
      */
     public boolean overlapsInSequence1(Match other) {
-        return !(getEndPosSequence1() <= other.startPosSequence1 ||
-                other.getEndPosSequence1() <= startPosSequence1);
+        return !(getEndPosSequence1() <= other.startPosSequence1
+                || other.getEndPosSequence1() <= startPosSequence1);
     }
 
     /**
@@ -91,8 +91,7 @@ public class Match {
      * @return true if there is an overlap in sequence 2
      */
     public boolean overlapsInSequence2(Match other) {
-        return !(getEndPosSequence2() <= other.startPosSequence2 ||
-                other.getEndPosSequence2() <= startPosSequence2);
+        return !(getEndPosSequence2() <= other.startPosSequence2 || other.getEndPosSequence2() <= startPosSequence2);
     }
 
     /**
@@ -103,22 +102,6 @@ public class Match {
      */
     public boolean overlapsWith(Match other) {
         return overlapsInSequence1(other) || overlapsInSequence2(other);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-
-        Match match = (Match) obj;
-        return startPosSequence1 == match.startPosSequence1 &&
-                startPosSequence2 == match.startPosSequence2 &&
-                length == match.length;
-    }
-
-    @Override
-    public int hashCode() {
-        return java.util.Objects.hash(startPosSequence1, startPosSequence2, length);
     }
 
     @Override

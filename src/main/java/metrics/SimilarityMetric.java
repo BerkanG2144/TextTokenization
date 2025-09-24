@@ -5,7 +5,7 @@ import matching.MatchResult;
 /**
  * Interface for calculating similarity metrics between texts.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public interface SimilarityMetric {
 

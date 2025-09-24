@@ -9,7 +9,7 @@ import java.util.List;
  * Separators: all characters except letters and digits
  * Exception: numbers may contain dots, colons, and commas internally (not at start/end)
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class SmartTokenizer implements TokenizationStrategy {
 

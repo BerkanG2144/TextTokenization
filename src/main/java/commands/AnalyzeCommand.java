@@ -1,17 +1,28 @@
 package commands;
 
-import core.*;
-import matching.*;
-import tokenization.*;
+import core.AnalysisResult;
+import core.TextManager;
+import core.Text;
+import core.Token;
+import core.Match;
+
+import exceptions.CommandException;
+import matching.MatchResult;
+import matching.SequenceMatcher;
+
+import tokenization.SmartTokenizer;
+import tokenization.CharTokenizer;
+import tokenization.WordTokenizer;
+import tokenization.TokenizationStrategy;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
 
 /**
  * Command to analyze all loaded texts for similarities.
- * Usage: analyze <strategy> <minMatchLength>
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class AnalyzeCommand implements Command {
     private final TextManager textManager;
@@ -47,24 +58,21 @@ public class AnalyzeCommand implements Command {
         // Get tokenization strategy
         TokenizationStrategy strategy = getStrategy(strategyName);
         if (strategy == null) {
-            throw new CommandException("Unknown tokenization strategy: " + strategyName +
-                    ". Available strategies: CHAR, WORD, SMART");
+            throw new CommandException("Unknown tokenization strategy: " + strategyName
+                    + ". Available strategies: CHAR, WORD, SMART");
         }
 
-        // Check if we have texts to analyze
         if (textManager.getTextCount() < 2) {
             throw new CommandException("Need at least 2 texts to perform analysis");
         }
 
         long startTime = System.currentTimeMillis();
 
-        // Perform analysis on all text pairs
         List<MatchResult> results = analyzeAllPairs(strategy, minMatchLength);
 
         long endTime = System.currentTimeMillis();
         long duration = endTime - startTime;
 
-        // Store results
         lastAnalysisResult = new AnalysisResult(results, strategyName, minMatchLength, duration);
 
         return "Analysis took " + duration + "ms";
@@ -81,35 +89,29 @@ public class AnalyzeCommand implements Command {
         List<MatchResult> results = new ArrayList<>();
         List<Text> texts = new ArrayList<>(textManager.getAllTexts());
 
-        // Sort texts alphabetically by identifier to ensure consistent ordering
-        texts.sort(Comparator.comparing(Text::getIdentifier));
+        texts.sort(Comparator.comparing(Text::identifier));
 
         SequenceMatcher matcher = new SequenceMatcher();
 
-        // Compare all pairs
         for (int i = 0; i < texts.size(); i++) {
             for (int j = i + 1; j < texts.size(); j++) {
                 Text text1 = texts.get(i);
                 Text text2 = texts.get(j);
 
-                // Tokenize both texts
-                List<Token> sequence1 = strategy.tokenize(text1.getContent());
-                List<Token> sequence2 = strategy.tokenize(text2.getContent());
+                List<Token> sequence1 = strategy.tokenize(text1.content());
+                List<Token> sequence2 = strategy.tokenize(text2.content());
 
-                // Find matches - SequenceMatcher handles the search/pattern logic internally
                 List<Match> matches = matcher.findMatches(sequence1, sequence2, minMatchLength);
 
-                // Create result - matches are already in correct positions relative to text1, text2
                 MatchResult result = new MatchResult(
-                        text1, text2,  // Always in original order
-                        sequence1, sequence2,  // Always in original order
+                        text1, text2,
+                        sequence1, sequence2,
                         matches, strategy.getName(), minMatchLength
                 );
 
                 results.add(result);
             }
         }
-
         return results;
     }
 
@@ -153,7 +155,6 @@ public class AnalyzeCommand implements Command {
             return;
         }
 
-        // Find and replace the match result in the analysis
         List<MatchResult> allResults = new ArrayList<>(lastAnalysisResult.getAllResults());
         for (int i = 0; i < allResults.size(); i++) {
             MatchResult result = allResults.get(i);
@@ -163,7 +164,6 @@ public class AnalyzeCommand implements Command {
             }
         }
 
-        // Create a new AnalysisResult with updated results
         lastAnalysisResult = new AnalysisResult(
                 allResults,
                 lastAnalysisResult.getTokenizationStrategy(),

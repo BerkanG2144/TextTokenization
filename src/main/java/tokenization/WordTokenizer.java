@@ -9,7 +9,7 @@ import java.util.List;
  * Separators: spaces and line breaks
  * Special characters: . , : ; ! _ ( ) { }
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class WordTokenizer implements TokenizationStrategy {
 

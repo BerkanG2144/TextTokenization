@@ -2,16 +2,15 @@ package commands;
 
 import core.AnalysisResult;
 import core.Match;
+import exceptions.CommandException;
 import matching.MatchResult;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Comparator;
 
 /**
  * Command to list matches for a specific text pair.
- * Usage: matches <id> <id>
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class MatchesCommand implements Command {
     private final AnalyzeCommand analyzeCommand;
@@ -34,13 +33,11 @@ public class MatchesCommand implements Command {
         String id1 = args[0];
         String id2 = args[1];
 
-        // Get analysis results
         AnalysisResult analysisResult = analyzeCommand.getLastAnalysisResult();
         if (analysisResult == null) {
             throw new CommandException("No analysis results available. Run analyze command first.");
         }
 
-        // Find the match result for these two texts
         MatchResult result = analysisResult.getResult(id1, id2);
         if (result == null) {
             throw new CommandException("No comparison found for texts '" + id1 + "' and '" + id2 + "'");
@@ -48,75 +45,46 @@ public class MatchesCommand implements Command {
 
         List<Match> matches = result.getMatches();
         if (matches.isEmpty()) {
-            return ""; // No matches found
+            return "";
         }
 
+        // --- Sortierung bleibt wie bei dir:
+        boolean text1IsSearch = result.getText1().identifier()
+                .equals(result.getSearchText().identifier());
         List<Match> sortedMatches = new ArrayList<>(matches);
-
-// Bestimme ob text1 search text ist
-        boolean text1IsSearch = result.getText1().getIdentifier().equals(result.getSearchText().getIdentifier());
-
-        sortedMatches.sort(new Comparator<Match>() {
-            @Override
-            public int compare(Match m1, Match m2) {
-                // First by length (descending)
-                int lengthCompare = Integer.compare(m2.getLength(), m1.getLength());
-                if (lengthCompare != 0) {
-                    return lengthCompare;
-                }
-
-                // Get search positions for both matches
-                int searchPos1 = text1IsSearch ? m1.getStartPosSequence1() : m1.getStartPosSequence2();
-                int searchPos2 = text1IsSearch ? m2.getStartPosSequence1() : m2.getStartPosSequence2();
-
-                // Then by start position in search sequence (ascending)
-                int searchCompare = Integer.compare(searchPos1, searchPos2);
-                if (searchCompare != 0) {
-                    return searchCompare;
-                }
-
-                // Get pattern positions for both matches
-                int patternPos1 = text1IsSearch ? m1.getStartPosSequence2() : m1.getStartPosSequence1();
-                int patternPos2 = text1IsSearch ? m2.getStartPosSequence2() : m2.getStartPosSequence1();
-
-                // Finally by start position in pattern sequence (ascending)
-                return Integer.compare(patternPos1, patternPos2);
+        sortedMatches.sort((m1, m2) -> {
+            int byLen = Integer.compare(m2.length(), m1.length());
+            if (byLen != 0) {
+                return byLen;
             }
+            int s1 = text1IsSearch ? m1.startPosSequence1() : m1.startPosSequence2();
+            int s2 = text1IsSearch ? m2.startPosSequence1() : m2.startPosSequence2();
+            int bySearch = Integer.compare(s1, s2);
+            if (bySearch != 0) {
+                return bySearch;
+            }
+            int p1 = text1IsSearch ? m1.startPosSequence2() : m1.startPosSequence1();
+            int p2 = text1IsSearch ? m2.startPosSequence2() : m2.startPosSequence1();
+            return Integer.compare(p1, p2);
         });
-
-        // Format output
-        StringBuilder output = new StringBuilder();
+        StringBuilder out = new StringBuilder();
         for (int i = 0; i < sortedMatches.size(); i++) {
             if (i > 0) {
-                output.append("\n");
+                out.append('\n');
             }
-
-            Match match = sortedMatches.get(i);
-
-            // Output positions based on command order: id1-id2
-            // id1 is first text in command, id2 is second text in command
-            int pos1, pos2; // positions in id1 and id2 respectively
-
-            if (result.getText1().getIdentifier().equals(id1)) {
-                // text1 corresponds to id1, text2 corresponds to id2
-                pos1 = match.getStartPosSequence1();
-                pos2 = match.getStartPosSequence2();
-            } else {
-                // text2 corresponds to id1, text1 corresponds to id2
-                pos1 = match.getStartPosSequence2();
-                pos2 = match.getStartPosSequence1();
-            }
-
-            output.append("Match of length ")
-                    .append(match.getLength())
+            Match m = sortedMatches.get(i);
+            int searchPos  = text1IsSearch ? m.startPosSequence1() : m.startPosSequence2();
+            int patternPos = text1IsSearch ? m.startPosSequence2() : m.startPosSequence1();
+            out.append("Match of length ")
+                    .append(m.length())
                     .append(": ")
-                    .append(pos1)
+                    .append(searchPos)
                     .append("-")
-                    .append(pos2);
+                    .append(patternPos);
         }
-
-        return output.toString();
+        return out.toString();
     }
+
 
     @Override
     public String getName() {

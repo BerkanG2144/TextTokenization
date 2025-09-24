@@ -5,7 +5,7 @@ import matching.MatchResult;
 /**
  * Longest match metric (LONG): length of longest matching subsequence in tokens.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class LongestMatch implements SimilarityMetric {
 

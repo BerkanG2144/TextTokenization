@@ -1,12 +1,13 @@
 package commands;
 
 import core.TextManager;
+import exceptions.CommandException;
 
 /**
  * Command to clear all texts from the system.
  * Usage: clear
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class ClearCommand implements Command {
     private final TextManager textManager;

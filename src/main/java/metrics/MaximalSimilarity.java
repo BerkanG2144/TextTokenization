@@ -9,7 +9,7 @@ import java.util.Locale;
  * Maximal similarity metric (MAX): max(m/a, m/b)
  * Returns percentage with 2 decimal places.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class MaximalSimilarity implements SimilarityMetric {
     private static final DecimalFormat FORMATTER;

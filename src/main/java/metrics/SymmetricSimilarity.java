@@ -13,7 +13,7 @@ import java.util.Set;
  * Returns percentage with 2 decimal places.
  * m = number of unique matching tokens (not sum of match lengths)
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class SymmetricSimilarity implements SimilarityMetric {
     private static final DecimalFormat FORMATTER;
@@ -49,9 +49,9 @@ public class SymmetricSimilarity implements SimilarityMetric {
 
         // Collect all positions covered by matches in both sequences
         for (Match match : result.getMatches()) {
-            int start1 = match.getStartPosSequence1();
-            int start2 = match.getStartPosSequence2();
-            int length = match.getLength();
+            int start1 = match.startPosSequence1();
+            int start2 = match.startPosSequence2();
+            int length = match.length();
 
             for (int i = 0; i < length; i++) {
                 matchedPositionsSeq1.add(start1 + i);

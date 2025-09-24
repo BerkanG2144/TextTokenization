@@ -9,7 +9,7 @@ import java.util.ArrayList;
  * Container for the results of matching two texts.
  * Stores the matched texts, their token sequences, and found matches.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class MatchResult {
     private final Text text1;
@@ -159,7 +159,7 @@ public class MatchResult {
      * @return sum of all match lengths
      */
     public int getTotalMatchingTokens() {
-        return matches.stream().mapToInt(Match::getLength).sum();
+        return matches.stream().mapToInt(Match::length).sum();
     }
 
     /**
@@ -168,7 +168,7 @@ public class MatchResult {
      * @return the longest match length, or 0 if no matches
      */
     public int getLongestMatchLength() {
-        return matches.stream().mapToInt(Match::getLength).max().orElse(0);
+        return matches.stream().mapToInt(Match::length).max().orElse(0);
     }
 
     /**
@@ -179,8 +179,8 @@ public class MatchResult {
      * @return true if this result matches the given identifiers (order independent)
      */
     public boolean involves(String id1, String id2) {
-        return (text1.getIdentifier().equals(id1) && text2.getIdentifier().equals(id2)) ||
-                (text1.getIdentifier().equals(id2) && text2.getIdentifier().equals(id1));
+        return (text1.identifier().equals(id1) && text2.identifier().equals(id2))
+                || (text1.identifier().equals(id2) && text2.identifier().equals(id1));
     }
 
     /**

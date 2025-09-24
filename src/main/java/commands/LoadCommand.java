@@ -2,14 +2,14 @@ package commands;
 
 import core.Text;
 import core.TextManager;
+import exceptions.CommandException;
 import utils.FileUtils;
 import java.io.IOException;
 
 /**
  * Command to load text from a file.
- * Usage: load <path>
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class LoadCommand implements Command {
     private final TextManager textManager;

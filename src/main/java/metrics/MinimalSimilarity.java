@@ -9,7 +9,7 @@ import java.util.Locale;
  * Minimal similarity metric (MIN): min(m/a, m/b)
  * Returns percentage with 2 decimal places.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class MinimalSimilarity implements SimilarityMetric {
     private static final DecimalFormat FORMATTER;

@@ -8,7 +8,7 @@ import java.util.Collection;
  * Central manager for all loaded texts in the application.
  * Manages text storage, retrieval, and identifier handling.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class TextManager {
     private final Map<String, Text> texts;
@@ -31,8 +31,8 @@ public class TextManager {
             throw new IllegalArgumentException("Text cannot be null");
         }
 
-        boolean wasUpdate = texts.containsKey(text.getIdentifier());
-        texts.put(text.getIdentifier(), text);
+        boolean wasUpdate = texts.containsKey(text.identifier());
+        texts.put(text.identifier(), text);
         return wasUpdate;
     }
 

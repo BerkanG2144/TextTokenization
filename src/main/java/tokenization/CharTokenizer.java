@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Tokenization strategy that treats each character as a separate token.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class CharTokenizer implements TokenizationStrategy {
 

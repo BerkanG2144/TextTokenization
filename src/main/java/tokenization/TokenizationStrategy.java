@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Strategy interface for different tokenization approaches.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public interface TokenizationStrategy {
 

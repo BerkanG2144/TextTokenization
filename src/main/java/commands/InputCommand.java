@@ -2,12 +2,12 @@ package commands;
 
 import core.Text;
 import core.TextManager;
+import exceptions.CommandException;
 
 /**
  * Command to input text directly via command line.
- * Usage: input <id> <text>
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class InputCommand implements Command {
     private final TextManager textManager;

@@ -3,6 +3,7 @@ package commands;
 import core.Text;
 import core.TextManager;
 import core.Token;
+import exceptions.CommandException;
 import tokenization.SmartTokenizer;
 import tokenization.TokenizationStrategy;
 import tokenization.CharTokenizer;
@@ -12,9 +13,8 @@ import java.util.List;
 
 /**
  * Command to display tokenized text.
- * Usage: tokenization <id> <strategy>
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class TokenizationCommand implements Command {
     private final TextManager textManager;
@@ -46,12 +46,12 @@ public class TokenizationCommand implements Command {
         // Get tokenization strategy
         TokenizationStrategy strategy = getStrategy(strategyName);
         if (strategy == null) {
-            throw new CommandException("Unknown tokenization strategy: " + strategyName +
-                    ". Available strategies: CHAR, WORD, SMART");
+            throw new CommandException("Unknown tokenization strategy: " + strategyName
+                    + ". Available strategies: CHAR, WORD, SMART");
         }
 
         // Tokenize and format output
-        List<Token> tokens = strategy.tokenize(text.getContent());
+        List<Token> tokens = strategy.tokenize(text.content());
 
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < tokens.size(); i++) {

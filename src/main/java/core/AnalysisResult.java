@@ -10,7 +10,7 @@ import java.util.HashMap;
  * Container for all analysis results of a text comparison session.
  * Stores results for all text pairs and provides lookup functionality.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class AnalysisResult {
     private final List<MatchResult> results;
@@ -37,8 +37,8 @@ public class AnalysisResult {
 
         // Build lookup map
         for (MatchResult result : results) {
-            String key = createKey(result.getText1().getIdentifier(),
-                    result.getText2().getIdentifier());
+            String key = createKey(result.getText1().identifier(),
+                    result.getText2().identifier());
             resultMap.put(key, result);
         }
     }

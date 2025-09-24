@@ -5,7 +5,7 @@ import matching.MatchResult;
 /**
  * Match sum metric (LEN): total number of matching tokens.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class MatchSum implements SimilarityMetric {
 

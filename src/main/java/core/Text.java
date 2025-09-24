@@ -4,19 +4,16 @@ package core;
  * Represents a text with an identifier and content.
  * Texts can be loaded from files or input via console.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
-public class Text {
-    private final String identifier;
-    private final String content;
-
+public record Text(String identifier, String content) {
     /**
      * Creates a new Text instance.
      *
      * @param identifier the unique identifier for this text
-     * @param content the actual text content
+     * @param content    the actual text content
      */
-    public Text(String identifier, String content) {
+    public Text {
         if (identifier == null || identifier.trim().isEmpty()) {
             throw new IllegalArgumentException("Identifier cannot be null or empty");
         }
@@ -24,8 +21,6 @@ public class Text {
             throw new IllegalArgumentException("Content cannot be null");
         }
 
-        this.identifier = identifier;
-        this.content = content;
     }
 
     /**
@@ -33,7 +28,8 @@ public class Text {
      *
      * @return the identifier
      */
-    public String getIdentifier() {
+    @Override
+    public String identifier() {
         return identifier;
     }
 
@@ -42,7 +38,8 @@ public class Text {
      *
      * @return the text content
      */
-    public String getContent() {
+    @Override
+    public String content() {
         return content;
     }
 
@@ -57,8 +54,12 @@ public class Text {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
 
         Text text = (Text) obj;
         return identifier.equals(text.identifier) && content.equals(text.content);

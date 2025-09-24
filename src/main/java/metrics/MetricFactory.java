@@ -3,9 +3,13 @@ package metrics;
 /**
  * Factory class for creating similarity metrics.
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
-public class MetricFactory {
+public final class MetricFactory {
+
+    private MetricFactory() {
+        //
+    }
 
     /**
      * Creates a similarity metric by name.

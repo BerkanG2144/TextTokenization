@@ -1,6 +1,7 @@
 package commands;
 
 import core.AnalysisResult;
+import exceptions.CommandException;
 import matching.MatchResult;
 import metrics.SimilarityMetric;
 import metrics.MetricFactory;
@@ -10,9 +11,8 @@ import java.util.Comparator;
 
 /**
  * Command to list similarity values for all text pairs.
- * Usage: list <metric> [order]
  *
- * @author [Dein u-Kürzel]
+ * @author ujnaa
  */
 public class ListCommand implements Command {
     private final AnalyzeCommand analyzeCommand;
@@ -43,8 +43,7 @@ public class ListCommand implements Command {
         // Get metric
         SimilarityMetric metric = MetricFactory.createMetric(metricName);
         if (metric == null) {
-            throw new CommandException("Unknown metric: " + metricName +
-                    ". Available metrics: AVG, MAX, MIN, LEN, LONG");
+            throw new CommandException("Unknown metric: " + metricName + ". Available metrics: AVG, MAX, MIN, LEN, LONG");
         }
 
         // Get analysis results
@@ -61,8 +60,8 @@ public class ListCommand implements Command {
 
             // Format: searchText-patternText: value
             // The search text is the longer sequence (or first text if same length)
-            String searchId = result.getSearchText().getIdentifier();
-            String patternId = result.getPatternText().getIdentifier();
+            String searchId = result.getSearchText().identifier();
+            String patternId = result.getPatternText().identifier();
             String line = searchId + "-" + patternId + ": " + formattedValue;
 
             entries.add(new SimilarityEntry(line, value, searchId, patternId));
@@ -90,22 +89,16 @@ public class ListCommand implements Command {
      * @param order "ASC" or "DSC"
      */
     private void sortEntries(List<SimilarityEntry> entries, String order) {
-        Comparator<SimilarityEntry> comparator = (e1, e2) -> {
-            // First sort by similarity value
-            int valueCompare = Double.compare(e1.value, e2.value);
-            if (valueCompare != 0) {
-                return order.equals("ASC") ? valueCompare : -valueCompare;
-            }
+        Comparator<SimilarityEntry> comparator = Comparator
+                .comparingDouble((SimilarityEntry e) -> e.value)
+                .thenComparing(e -> e.id1)
+                .thenComparing(e -> e.id2);
 
-            // Then by first identifier (alphabetically ascending)
-            int id1Compare = e1.id1.compareTo(e2.id1);
-            if (id1Compare != 0) {
-                return id1Compare;
-            }
-
-            // Finally by second identifier (alphabetically ascending)
-            return e1.id2.compareTo(e2.id2);
-        };
+        if (order.equals("DSC")) {
+            comparator = comparator.reversed()
+                    .thenComparing(e -> e.id1)
+                    .thenComparing(e -> e.id2);
+        }
 
         entries.sort(comparator);
     }
