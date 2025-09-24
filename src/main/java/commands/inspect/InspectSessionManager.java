@@ -156,26 +156,13 @@ public class InspectSessionManager {
                     updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
                     return action.getExitReason();
                 }
-                boolean decisionCmd = "A".equals(command) || "I".equals(command) || "X".equals(command);
-                if (decisionCmd) {
-                    // Re-render *current* match to show updated decision ("Current decision: Accept")
-                    displayManager.displayMatch(
-                            state.getSortedMatches().get(currentIndex), result, params, state.getDecisions());
-                }
-
-                // Now advance if the action decided a next index; otherwise keep current.
                 if (action.hasValidIndex()) {
                     currentIndex = action.getNewIndex();
                 }
 
-                // Render the (possibly advanced) current match for the user's next choice
+// Display current match exactly once
                 displayManager.displayMatch(
                         state.getSortedMatches().get(currentIndex), result, params, state.getDecisions());
-
-                if (action.hasValidIndex()) {
-                    currentIndex = action.getNewIndex();
-                }
-                displayManager.displayMatch(state.getSortedMatches().get(currentIndex), result, params, state.getDecisions());
 
             } catch (CommandException e) {
                 String msg = e.getMessage();
@@ -200,23 +187,16 @@ public class InspectSessionManager {
             case "X" -> {
                 ExclusionRegistry reg = ExclusionRegistry.getInstance();
 
-                // 1) Wenn noch keine Entscheidung in dieser Inspect-Session:
-                //    -> ganze Search-ID ausschließen und sauber beenden
                 if (state.getDecisions().isEmpty()) {
                     reg.exclude(state.getParams().id1());      // globale Dokument-ID
                     yield InspectionAction.exitComplete();    // nur eine Abschlusszeile
                 }
 
-                // 2) Sonst: lokale Subsequenzen (k1/k2) ausschließen
                 String k1 = buildKeyForSeq1(currentMatch, result);
                 String k2 = buildKeyForSeq2(currentMatch, result);
                 reg.exclude(k1);
                 reg.exclude(k2);
 
-                // WICHTIG: jetzt nicht "stay", sondern Navigation entscheiden lassen,
-                // damit zum nächsten unbehandelten Match gesprungen wird.
-                // handleDecisionCommand("X", ...) soll currentMatch als "behandelt" markieren
-                // und einen neuen Index liefern.
                 yield navigationManager.handleDecisionCommand("X", currentMatch, currentIndex, state);
             }
             case "B" -> InspectionAction.exitUser();
