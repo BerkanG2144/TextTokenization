@@ -1,6 +1,8 @@
 package tokenization;
 
 import core.Token;
+import exceptions.TokenizationException;
+
 import java.util.List;
 
 /**
@@ -15,8 +17,9 @@ public interface TokenizationStrategy {
      *
      * @param text the text to tokenize
      * @return a list of tokens
+     * @throws TokenizationException if tokenization fails due to invalid input or processing errors
      */
-    List<Token> tokenize(String text);
+    List<Token> tokenize(String text) throws TokenizationException;
 
     /**
      * Gets the name of this tokenization strategy.

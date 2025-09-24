@@ -1,6 +1,8 @@
 package tokenization;
 
 import core.Token;
+import exceptions.TokenizationException;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +16,7 @@ import java.util.List;
 public class SmartTokenizer implements TokenizationStrategy {
 
     @Override
-    public List<Token> tokenize(String text) {
+    public List<Token> tokenize(String text) throws TokenizationException {
         if (text == null) {
             throw new IllegalArgumentException("Text cannot be null");
         }

@@ -17,7 +17,7 @@ public interface Command {
      *
      * @param args the command arguments
      * @return the result message, or null if no output
-     * @throws CommandException if the command fails due to invalid usage or parameters
+     * @throws CommandException if the command fails due to invalid usage, parameters, insufficient data, or tokenization errors
      * @throws TextNotFoundException if a referenced text could not be found
      * @throws AnalysisNotPerformedException if the command requires an analysis that was not performed yet
      * @throws InvalidMatchException if a match operation fails (e.g. invalid index or overlap)

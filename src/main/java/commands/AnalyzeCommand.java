@@ -8,6 +8,7 @@ import core.Match;
 
 import exceptions.CommandException;
 import exceptions.InvalidMatchException;
+import exceptions.TokenizationException;
 import matching.MatchResult;
 import matching.SequenceMatcher;
 
@@ -69,14 +70,18 @@ public class AnalyzeCommand implements Command {
 
         long startTime = System.currentTimeMillis();
 
-        List<MatchResult> results = analyzeAllPairs(strategy, minMatchLength);
+        try {
+            List<MatchResult> results = analyzeAllPairs(strategy, minMatchLength);
 
-        long endTime = System.currentTimeMillis();
-        long duration = endTime - startTime;
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
 
-        lastAnalysisResult = new AnalysisResult(results, strategyName, minMatchLength, duration);
+            lastAnalysisResult = new AnalysisResult(results, strategyName, minMatchLength, duration);
 
-        return "Analysis took " + duration + "ms";
+            return "Analysis took " + duration + "ms";
+        } catch (TokenizationException e) {
+            throw new CommandException("Analysis failed due to tokenization error: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -85,8 +90,11 @@ public class AnalyzeCommand implements Command {
      * @param strategy the tokenization strategy
      * @param minMatchLength the minimum match length
      * @return list of match results for all pairs
+     * @throws InvalidMatchException if match creation fails
+     * @throws TokenizationException if tokenization fails
      */
-    private List<MatchResult> analyzeAllPairs(TokenizationStrategy strategy, int minMatchLength) throws InvalidMatchException {
+    private List<MatchResult> analyzeAllPairs(TokenizationStrategy strategy, int minMatchLength)
+            throws InvalidMatchException, TokenizationException {
         List<MatchResult> results = new ArrayList<>();
         List<Text> texts = new ArrayList<>(textManager.getAllTexts());
 

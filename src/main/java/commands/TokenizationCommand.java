@@ -4,6 +4,7 @@ import core.Text;
 import core.TextManager;
 import core.Token;
 import exceptions.CommandException;
+import exceptions.TokenizationException;
 import tokenization.SmartTokenizer;
 import tokenization.TokenizationStrategy;
 import tokenization.CharTokenizer;
@@ -50,18 +51,22 @@ public class TokenizationCommand implements Command {
                     + ". Available strategies: CHAR, WORD, SMART");
         }
 
-        // Tokenize and format output
-        List<Token> tokens = strategy.tokenize(text.content());
+        try {
+            // Tokenize and format output
+            List<Token> tokens = strategy.tokenize(text.content());
 
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < tokens.size(); i++) {
-            if (i > 0) {
-                result.append("~");
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < tokens.size(); i++) {
+                if (i > 0) {
+                    result.append("~");
+                }
+                result.append(tokens.get(i).getValue());
             }
-            result.append(tokens.get(i).getValue());
-        }
 
-        return result.toString();
+            return result.toString();
+        } catch (TokenizationException e) {
+            throw new CommandException("Tokenization failed: " + e.getMessage(), e);
+        }
     }
 
     private TokenizationStrategy getStrategy(String strategyName) {
