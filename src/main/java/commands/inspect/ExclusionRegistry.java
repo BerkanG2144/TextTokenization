@@ -5,7 +5,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Global registry for excluded text identifiers during inspection.
+ * Global registry for excluded subsequence keys during inspection.
+ * Keys are stable String representations of token subsequences.
  *
  * @author ujnaa
  */
@@ -14,7 +15,7 @@ public final class ExclusionRegistry {
     /** Singleton instance. */
     private static final ExclusionRegistry INSTANCE = new ExclusionRegistry();
 
-    /** Internal set of excluded identifiers. */
+    /** Internal set of excluded subsequence keys. */
     private final Set<String> excluded = new HashSet<>();
 
     /** Private constructor for singleton. */
@@ -30,30 +31,37 @@ public final class ExclusionRegistry {
     }
 
     /**
-     * Adds a text identifier to the exclusion set.
+     * Adds a subsequence key to the exclusion set.
      *
-     * @param textId the identifier of the text to exclude, must not be null
+     * @param key the subsequence key to exclude, must not be null
      */
-    public void exclude(String textId) {
-        if (textId != null) {
-            excluded.add(textId);
+    public void exclude(String key) {
+        if (key != null) {
+            excluded.add(key);
         }
     }
 
     /**
-     * Checks whether a text identifier is excluded.
+     * Checks whether a subsequence key is excluded.
      *
-     * @param textId the identifier to check
-     * @return {@code true} if the identifier is excluded, {@code false} otherwise
+     * @param key the subsequence key to check
+     * @return {@code true} if the key is excluded, {@code false} otherwise
      */
-    public boolean isExcluded(String textId) {
-        return textId != null && excluded.contains(textId);
+    public boolean contains(String key) {
+        return key != null && excluded.contains(key);
     }
 
     /**
-     * Returns a read-only snapshot of the currently excluded identifiers.
+     * Clears all excluded keys (for fresh analysis runs).
+     */
+    public void clear() {
+        excluded.clear();
+    }
+
+    /**
+     * Returns a read-only snapshot of the currently excluded keys.
      *
-     * @return unmodifiable set of excluded identifiers
+     * @return unmodifiable set of excluded keys
      */
     public Set<String> snapshot() {
         return Collections.unmodifiableSet(excluded);

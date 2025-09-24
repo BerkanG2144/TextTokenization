@@ -1,6 +1,7 @@
 package commands.inspect;
 
 import core.Match;
+import matching.MatchResult;
 
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ public final class InspectState {
     private final Set<Match> treatedMatches;
     private final Map<Match, String> decisions;
     private final List<Match> modifiedMatches;
+    private final MatchResult resultRef;
 
     /**
      * Creates a new InspectState.
@@ -27,17 +29,20 @@ public final class InspectState {
      * @param decisions user decisions for each match
      * @param modifiedMatches working copy of matches for modification
      * @param params for parameter
+     * @param resultRef for res
      */
     public InspectState(InspectParameters params,
                         List<Match> sortedMatches,
                         Set<Match> treatedMatches,
                         Map<Match, String> decisions,
-                        List<Match> modifiedMatches) {
-        this.params = params;                     // ← NEU
+                        List<Match> modifiedMatches,
+                        MatchResult resultRef) {   // <--- hinzufügen
+        this.params = params;
         this.sortedMatches = sortedMatches;
         this.treatedMatches = treatedMatches;
         this.decisions = decisions;
         this.modifiedMatches = modifiedMatches;
+        this.resultRef = resultRef;        // <--- setzen
     }
 
     /**
@@ -83,6 +88,15 @@ public final class InspectState {
      */
     public InspectParameters getParams() {
         return this.params;
+    }
+
+    /**
+     * Gets result.
+     *
+     * @return res
+     */
+    public MatchResult getResultRef() {
+        return resultRef;
     }
 
 }

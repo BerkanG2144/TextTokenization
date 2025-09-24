@@ -46,6 +46,7 @@ public class InspectNavigationManager {
         }
         return InspectionAction.moveTo(nextIndex);
     }
+
     /**
      * Handles the previous command.
      *
@@ -80,11 +81,8 @@ public class InspectNavigationManager {
             state.getModifiedMatches().removeIf(m -> m.equals(currentMatch));
         }
 
-        // If user chooses 'X' (Exclude & finish), exit as COMPLETED immediately
-        if ("X".equals(input)) {
-            return InspectionAction.exitComplete();
-        }
-
+        // KORREKTUR: X soll NICHT sofort beenden, sondern wie A/I den nächsten Match suchen
+        // Alle Entscheidungen (A, I, X) verhalten sich gleich: nächsten unbehandelten Match finden
         int nextIndex = findNextUntreatedWrap(currentIndex, state.getSortedMatches(), state.getTreatedMatches());
         if (nextIndex == -1) {
             // No more untreated matches -> completed exit

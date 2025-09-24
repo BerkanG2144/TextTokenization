@@ -63,8 +63,8 @@ public class ListCommand implements Command {
             String patternId = result.getPatternText().identifier();
 
             // ▼ Neu: Exclusion berücksichtigen (Anzeige überschreiben, nicht neu berechnen)
-            boolean excluded = ExclusionRegistry.getInstance().isExcluded(searchId)
-                    || ExclusionRegistry.getInstance().isExcluded(patternId);
+            boolean excluded = ExclusionRegistry.getInstance().contains(searchId)
+                    || ExclusionRegistry.getInstance().contains(patternId);
             double shownValue = excluded ? 0.0 : value;
 
             String formattedValue = metric.format(shownValue);
