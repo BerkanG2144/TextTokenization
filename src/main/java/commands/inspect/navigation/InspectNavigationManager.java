@@ -41,11 +41,11 @@ public class InspectNavigationManager {
     public InspectionAction handleContinueCommand(int currentIndex, InspectState state) {
         int nextIndex = findNextUntreatedWrap(currentIndex, state.getSortedMatches(), state.getTreatedMatches());
         if (nextIndex == -1) {
-            return InspectionAction.exit();
+            // Inspection finished normally (no more untreated matches)
+            return InspectionAction.exitComplete();
         }
         return InspectionAction.moveTo(nextIndex);
     }
-
     /**
      * Handles the previous command.
      *
@@ -80,9 +80,15 @@ public class InspectNavigationManager {
             state.getModifiedMatches().removeIf(m -> m.equals(currentMatch));
         }
 
+        // If user chooses 'X' (Exclude & finish), exit as COMPLETED immediately
+        if ("X".equals(input)) {
+            return InspectionAction.exitComplete();
+        }
+
         int nextIndex = findNextUntreatedWrap(currentIndex, state.getSortedMatches(), state.getTreatedMatches());
         if (nextIndex == -1) {
-            return InspectionAction.exit();
+            // No more untreated matches -> completed exit
+            return InspectionAction.exitComplete();
         }
         return InspectionAction.moveTo(nextIndex);
     }

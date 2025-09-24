@@ -113,47 +113,66 @@ public class InspectSessionManager {
      */
     private void runInspectionLoop(MatchResult result, InspectParameters params,
                                    InspectState state, int startIndex, Scanner scanner,
-                                   AnalyzeCommand analyzeCommand) throws CommandException {
+                                   AnalyzeCommand analyzeCommand) {
         int currentIndex = startIndex;
 
+        // Initial anzeigen
+        displayManager.displayMatch(state.getSortedMatches().get(currentIndex), result, params, state.getDecisions());
+
         while (true) {
-            Match currentMatch = state.getSortedMatches().get(currentIndex);
-            displayManager.displayMatch(currentMatch, result, params, state.getDecisions());
+            // Eingabe nur VOR dem Lesen prüfen
+            if (!scanner.hasNextLine()) {
+                updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
+                return;
+            }
 
             String input = scanner.nextLine().trim().toUpperCase();
             if (input.isEmpty()) {
                 input = "C";
             }
+            String command = input.split("\\s+")[0];
 
-            InspectionAction action = handleUserInput(input, currentMatch, currentIndex, state);
+            try {
+                InspectionAction action = handleUserInput(command,
+                        state.getSortedMatches().get(currentIndex), state, currentIndex);
 
-            if (action.shouldExit()) {
-                updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
-                return;
-            }
+                if (action.shouldExit()) {
+                    updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
+                    return;
+                }
+                if (action.hasValidIndex()) {
+                    currentIndex = action.getNewIndex();
+                }
+                displayManager.displayMatch(state.getSortedMatches().get(currentIndex), result, params, state.getDecisions());
 
-            if (action.hasValidIndex()) {
-                currentIndex = action.getNewIndex();
+            } catch (CommandException e) {
+                String msg = e.getMessage();
+                if (msg != null && !msg.isBlank()) {
+                    System.out.println(msg.startsWith("ERROR:") ? msg : "ERROR: " + msg);
+                }
             }
         }
     }
 
+
+
     /**
      * Handles user input and returns the action to take.
      */
-    private InspectionAction handleUserInput(
-            String input, Match currentMatch, int currentIndex, InspectState state
-    ) throws CommandException {
-        return switch (input) {
+    private InspectionAction handleUserInput(String command, Match currentMatch, InspectState state, int currentIndex)
+            throws CommandException {
+        return switch (command) {
             case "C" -> navigationManager.handleContinueCommand(currentIndex, state);
             case "P" -> navigationManager.handlePreviousCommand(currentIndex, state);
-            case "A", "I", "X" -> navigationManager.handleDecisionCommand(input, currentMatch, currentIndex, state);
-            case "B" -> InspectionAction.exit();
+            case "A", "I" -> navigationManager.handleDecisionCommand(command, currentMatch, currentIndex, state);
+            case "X" -> InspectionAction.exitComplete();
+            case "B" -> InspectionAction.exitUser();
             default -> {
-                throw new CommandException("ERROR: Invalid command. Use C, P, A, I, X, or B.");
+                throw new CommandException("Error: Invalid command. Use C, P, A, I, X, or B.");
             }
         };
     }
+
 
 
     /**

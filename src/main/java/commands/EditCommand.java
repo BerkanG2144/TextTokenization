@@ -55,12 +55,12 @@ public class EditCommand implements Command {
 
         try {
             sessionManager.startEditSession(result, id1, id2);
-            return "OK, exit editing mode.";
+            return "OK, exit editing mode.";  // ✅ Ausgabe NICHT im Session-Loop
         } catch (QuitCommandException e) {
-            // Re-throw the quit exception so it can be handled by the main loop
-            throw e;
+            throw e; // beendet die App ohne weitere Ausgabe
         }
     }
+
 
     @Override
     public String getName() {

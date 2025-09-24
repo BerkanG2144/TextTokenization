@@ -182,7 +182,7 @@ public class EditCommandHandler {
             Match oldMatch = matches.get(originalIndex);
             Match newMatch = createExtendedMatch(oldMatch, len);
 
-            validateNoOverlap(newMatch, matches, originalIndex);
+            validateNoOverlap(newMatch, matches, originalIndex, "truncated");
             matches.set(originalIndex, newMatch);
 
         } catch (NumberFormatException e) {
@@ -208,7 +208,6 @@ public class EditCommandHandler {
         try {
             int displayIndex = Integer.parseInt(parts[1]);
             int len = Integer.parseInt(parts[2]);
-
             if (len == 0) {
                 throw new CommandException("ERROR: Truncation length cannot be 0");
             }
@@ -222,12 +221,14 @@ public class EditCommandHandler {
             Match oldMatch = matches.get(originalIndex);
             Match newMatch = createTruncatedMatch(oldMatch, len);
 
-            matches.set(originalIndex, newMatch);
+            validateNoOverlap(newMatch, matches, originalIndex, "truncated");
 
-        } catch (NumberFormatException e) {
+            matches.set(originalIndex, newMatch);
+        } catch (NumberFormatException | InvalidMatchException e) {
             throw new CommandException("ERROR: Invalid number format in truncate command: " + e.getMessage());
         }
     }
+
 
     /**
      * Handles setting a new similarity metric.
@@ -373,28 +374,26 @@ public class EditCommandHandler {
     }
 
     private Match createTruncatedMatch(Match oldMatch, int len) throws CommandException {
-        if (len > 0) {
-            int newLength = Math.max(1, oldMatch.length() - len);
-            return new Match(oldMatch.startPosSequence1(),
-                    oldMatch.startPosSequence2(),
-                    newLength);
-        } else {
-            int newStart1 = oldMatch.startPosSequence1() - len;
-            int newStart2 = oldMatch.startPosSequence2() - len;
-            int newLength = Math.max(1, oldMatch.length() + len);
-            if (newStart1 < 0 || newStart2 < 0) {
-                throw new CommandException("ERROR: Truncation would result in negative start positions");
-            }
-            return new Match(newStart1, newStart2, newLength);
+        if (len == 0) {
+            throw new CommandException("ERROR: Truncation length cannot be 0");
         }
+        int cut = Math.abs(len);                    // Richtung ignorieren
+        int newLength = Math.max(1, oldMatch.length() - cut);  // mindestens 1
+        return new Match(
+                oldMatch.startPosSequence1(),       // Start bleibt
+                oldMatch.startPosSequence2(),
+                newLength
+        );
     }
 
-    private void validateNoOverlap(Match newMatch, List<Match> matches, int excludeIndex)
+
+    private void validateNoOverlap(Match newMatch, List<Match> matches, int excludeIndex, String action)
             throws InvalidMatchException {
         for (int i = 0; i < matches.size(); i++) {
             if (i != excludeIndex && newMatch.overlapsWith(matches.get(i))) {
-                throw InvalidMatchException.forOverlap("extended match overlaps with another match");
+                throw new InvalidMatchException("ERROR: " + action + " match overlaps with another match");
             }
         }
     }
+
 }

@@ -19,7 +19,7 @@ public class WordTokenizer implements TokenizationStrategy {
     private static final String SEPARATORS = " \n\r";
 
     // Special characters to remove: . , : ; ! _ ( ) { }
-    private static final String SPECIAL_CHARS = ".,;:!_(){}";
+    private static final String SPECIAL_CHARS = ".,;:!_(){}?";
 
     @Override
     public List<Token> tokenize(String text) throws TokenizationException {

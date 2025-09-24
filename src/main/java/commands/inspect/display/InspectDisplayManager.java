@@ -67,6 +67,12 @@ public class InspectDisplayManager {
                 contextData.getSecondSequence().size() - 1);
         int endChar2 = contextData.getSecondSequence().get(lastTokenIndex2).getEndPosition();
 
+        startChar1 = clampHighlightStart(startChar1, endChar1, contextData.getFirstText());
+        endChar1   = clampHighlightEnd(startChar1, endChar1, contextData.getFirstText());
+
+        startChar2 = clampHighlightStart(startChar2, endChar2, contextData.getSecondText());
+        endChar2   = clampHighlightEnd(startChar2, endChar2, contextData.getSecondText());
+
         String context1 = extractContext(contextData.getFirstText(), startChar1, endChar1, contextData.getContextSize());
         String context2 = extractContext(contextData.getSecondText(), startChar2, endChar2, contextData.getContextSize());
 
@@ -75,6 +81,28 @@ public class InspectDisplayManager {
         System.out.println(context2);
         printUnderline(contextData.getSecondText(), startChar2, endChar2, contextData.getContextSize());
     }
+
+    private static int clampHighlightStart(int start, int end, String text) {
+        int s = start; // lokale Kopie
+        while (s < end && Character.isWhitespace(text.charAt(s))) {
+            s++;
+        }
+        return s;
+    }
+
+    private static int clampHighlightEnd(int start, int end, String text) {
+        int e = end; // lokale Kopie
+        while (e > start) {
+            char c = text.charAt(e - 1);
+            if (Character.isLetterOrDigit(c)) {
+                break;
+            }
+            e--;
+        }
+        return e;
+    }
+
+
 
     /**
      * Prints underline for matched text.

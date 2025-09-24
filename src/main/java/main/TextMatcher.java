@@ -63,21 +63,17 @@ public class TextMatcher {
             if (inputLine.isEmpty()) {
                 continue;
             }
-
             String[] parts = parseCommand(inputLine);
             String commandName = parts[0].toLowerCase();
-
             if ("quit".equals(commandName)) {
                 break;
             }
-
             try {
                 Command command = commands.get(commandName);
                 if (command == null) {
                     System.out.println("ERROR: Unknown command: " + commandName);
                     continue;
                 }
-
                 String[] args = new String[parts.length - 1];
                 System.arraycopy(parts, 1, args, 0, args.length);
 
@@ -87,13 +83,10 @@ public class TextMatcher {
                 }
 
             } catch (CommandException e) {
-                // Check if this is a quit request from within a special mode
                 if (e instanceof exceptions.QuitCommandException) {
-                    break; // Exit the application silently
+                    break;
                 }
-                // Handle regular command exceptions
                 String message = e.getMessage();
-                // Don't print empty messages
                 if (message != null && !message.trim().isEmpty()) {
                     if (!message.startsWith("ERROR:")) {
                         System.out.println("ERROR: " + message);

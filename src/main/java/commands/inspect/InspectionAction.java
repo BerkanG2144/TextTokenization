@@ -8,71 +8,85 @@ package commands.inspect;
  */
 public final class InspectionAction {
     private final boolean shouldExit;
-    private final int newIndex;
+    private final int newIndex; // -1 = stay
+    private final InspectExitReason exitReason; // null if shouldExit == false
 
-    /**
-     * Private constructor for creating actions.
-     *
-     * @param shouldExit whether the inspection should exit
-     * @param newIndex new index to move to (-1 if staying at current)
-     */
-    private InspectionAction(boolean shouldExit, int newIndex) {
+    private InspectionAction(boolean shouldExit, int newIndex, InspectExitReason exitReason) {
         this.shouldExit = shouldExit;
         this.newIndex = newIndex;
+        this.exitReason = exitReason;
     }
 
     /**
-     * Creates an exit action.
+     * Create an exit action with reason {@link InspectExitReason#USER_ABORT}.
      *
-     * @return action indicating inspection should exit
+     * @return a new {@code InspectionAction} representing user abort
      */
-    public static InspectionAction exit() {
-        return new InspectionAction(true, -1);
+    public static InspectionAction exitUser() {
+        return new InspectionAction(true, -1, InspectExitReason.USER_ABORT);
     }
 
     /**
-     * Creates a move action.
+     * Create an exit action with reason {@link InspectExitReason#COMPLETED}.
      *
-     * @param index index to move to
-     * @return action indicating movement to specified index
+     * @return a new {@code InspectionAction} representing completed inspection
+     */
+    public static InspectionAction exitComplete() {
+        return new InspectionAction(true, -1, InspectExitReason.COMPLETED);
+    }
+
+    /**
+     * Create a move action to a specific match index.
+     *
+     * @param index the target index to move to
+     * @return a new {@code InspectionAction} pointing to the given index
      */
     public static InspectionAction moveTo(int index) {
-        return new InspectionAction(false, index);
+        return new InspectionAction(false, index, null);
     }
 
     /**
-     * Creates a stay action.
+     * Create a stay action (no movement, keep inspecting).
      *
-     * @return action indicating to stay at current position
+     * @return a new {@code InspectionAction} staying at the current match
      */
     public static InspectionAction stay() {
-        return new InspectionAction(false, -1);
+        return new InspectionAction(false, -1, null);
     }
 
     /**
-     * Checks if inspection should exit.
+     * Checks whether the inspection loop should exit.
      *
-     * @return true if should exit
+     * @return {@code true} if the inspection loop should exit, {@code false} otherwise
      */
     public boolean shouldExit() {
         return shouldExit;
     }
 
     /**
-     * Gets the new index to move to.
+     * Gets the index to move to.
      *
-     * @return new index, or -1 if no movement
+     * @return the new index, or -1 if no movement
      */
     public int getNewIndex() {
         return newIndex;
     }
 
     /**
-     * Checks if there's a valid index to move to.
+     * Checks whether this action contains a valid index.
      *
-     * @return true if newIndex is valid (>= 0)
+     * @return {@code true} if the index is valid (>= 0), {@code false} otherwise
      */
     public boolean hasValidIndex() {
         return newIndex >= 0;
+    }
+
+    /**
+     * Gets the reason for exit.
+     *
+     * @return the exit reason if this action indicates exit, otherwise {@code null}
+     */
+    public InspectExitReason getExitReason() {
+        return exitReason;
     }
 }

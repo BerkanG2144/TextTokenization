@@ -41,13 +41,11 @@ public class TopCommand implements Command {
         } catch (NumberFormatException e) {
             throw new CommandException("Invalid number format for top N");
         }
-
         String metricName = args[1].toUpperCase(); // Second argument is metric
         SimilarityMetric metric = MetricFactory.createMetric(metricName);
         if (metric == null) {
             throw new CommandException("Unknown metric: " + metricName + ". Available metrics: AVG, MAX, MIN, LEN, LONG");
         }
-
         AnalysisResult analysisResult = analyzeCommand.getLastAnalysisResult();
         if (analysisResult == null) {
             throw new CommandException("No analysis results available. Run analyze command first.");
@@ -56,23 +54,23 @@ public class TopCommand implements Command {
         for (MatchResult result : analysisResult.getAllResults()) {
             double value = metric.calculate(result);
             String formattedValue = metric.format(value);
-            String line = result.getText1().identifier() + "-" + result.getText2().identifier() + ": " + formattedValue;
-            entries.add(new SimilarityEntry(line, value,
-                    result.getText1().identifier(),
-                    result.getText2().identifier()));
+            String searchId = result.getSearchText().identifier();
+            String patternId = result.getPatternText().identifier();
+            String line = searchId + "-" + patternId + ": " + formattedValue;
+            entries.add(new SimilarityEntry(line, value, searchId, patternId));
         }
         entries.sort(new Comparator<SimilarityEntry>() {
             @Override
             public int compare(SimilarityEntry e1, SimilarityEntry e2) {
-                int valueCompare = Double.compare(e2.value, e1.value);
+                int valueCompare = Double.compare(e2.value, e1.value); // Descending
                 if (valueCompare != 0) {
                     return valueCompare;
                 }
-                int id1Compare = e1.id1.compareTo(e2.id1);
+                int id1Compare = e1.id1.compareTo(e2.id1); // Ascending
                 if (id1Compare != 0) {
                     return id1Compare;
                 }
-                return e1.id2.compareTo(e2.id2);
+                return e1.id2.compareTo(e2.id2); // Ascending
             }
         });
         int actualN = Math.min(topN, entries.size());

@@ -50,6 +50,10 @@ public class EditSessionManager {
         printEditState(result, matches, currentMetric, id1, id2);
 
         while (true) {
+            if (!scanner.hasNextLine()) {
+                updateAnalysisResult(result, matches, id1, id2);
+                break;
+            }
             String input = scanner.nextLine().trim();
             if (input.isEmpty()) {
                 continue;
@@ -59,45 +63,82 @@ public class EditSessionManager {
             String command = parts[0].toLowerCase();
 
             try {
+                boolean printState = processCommand(command, parts, result, matches, id1, id2);
                 if ("exit".equals(command)) {
-                    updateAnalysisResult(result, matches, id1, id2);
-                    break;
-                } else if ("quit".equals(command)) {
-                    // Handle quit command - should terminate the entire application
-                    updateAnalysisResult(result, matches, id1, id2);
-                    throw new QuitCommandException();
-                } else if ("matches".equals(command)) {
-                    commandHandler.printMatches(matches, result, id1, id2);
-                } else if ("print".equals(command)) {
-                    commandHandler.handlePrintCommand(parts, matches, result, id1, id2);
-                } else if ("add".equals(command)) {
-                    commandHandler.handleAddCommand(parts, matches);
-                } else if ("discard".equals(command)) {
-                    commandHandler.handleDiscardCommand(parts, matches, result, id1);
-                } else if ("extend".equals(command)) {
-                    commandHandler.handleExtendCommand(parts, matches, result, id1);
-                } else if ("truncate".equals(command)) {
-                    commandHandler.handleTruncateCommand(parts, matches, result, id1);
-                } else if ("set".equals(command)) {
-                    currentMetric = commandHandler.handleSetCommand(parts);
-                } else {
-                    System.out.println("ERROR: Unknown command in edit mode: " + command);
-                    continue; // Don't print edit state for unknown commands
+                    return;
                 }
-
-                // Only print edit state if command was valid and not exit/quit
-                if (!"exit".equals(command) && !"quit".equals(command)) {
+                if (printState) {
                     printEditState(result, matches, currentMetric, id1, id2);
                 }
-
-            } catch (CommandException | InvalidMatchException | InvalidMetricException e) {
-                // Don't handle QuitCommandException here - let it propagate
-                if (e instanceof QuitCommandException) {
-                    throw (QuitCommandException) e;
+                if ("set".equals(command)) {
+                    currentMetric = commandHandler.handleSetCommand(parts);
+                    printEditState(result, matches, currentMetric, id1, id2);
                 }
-                System.out.println(e.getMessage());
-                printEditState(result, matches, currentMetric, id1, id2);
+            } catch (QuitCommandException e) {
+                throw e;
+            } catch (CommandException | InvalidMatchException | InvalidMetricException e) {
+                printError(e);
             }
+        }
+    }
+
+    /**
+     * Handles a single edit-mode command. Returns true if the edit state should be printed afterwards.
+     */
+    private boolean processCommand(String command, String[] parts, MatchResult result,
+                                   List<Match> matches, String id1, String id2)
+            throws CommandException, InvalidMatchException, InvalidMetricException, QuitCommandException {
+        if ("exit".equals(command)) {
+            if (parts.length != 1) {
+                throw new CommandException("exit command requires no arguments: exit");
+            }
+            updateAnalysisResult(result, matches, id1, id2);
+            return false;
+        } else if ("quit".equals(command)) {
+            if (parts.length != 1) {
+                throw new CommandException("quit command requires no arguments: quit");
+            }
+            updateAnalysisResult(result, matches, id1, id2);
+            throw new QuitCommandException();
+        } else if ("matches".equals(command)) {
+            if (parts.length != 1) {
+                throw new CommandException("matches command requires no arguments: matches");
+            }
+            commandHandler.printMatches(matches, result, id1, id2);
+            return true;
+        } else if ("print".equals(command)) {
+            commandHandler.handlePrintCommand(parts, matches, result, id1, id2);
+            return true;
+        } else if ("add".equals(command)) {
+            commandHandler.handleAddCommand(parts, matches);
+            return true;
+        } else if ("discard".equals(command)) {
+            commandHandler.handleDiscardCommand(parts, matches, result, id1);
+            return true;
+        } else if ("extend".equals(command)) {
+            commandHandler.handleExtendCommand(parts, matches, result, id1);
+            return true;
+        } else if ("truncate".equals(command)) {
+            commandHandler.handleTruncateCommand(parts, matches, result, id1);
+            return true;
+        } else if ("set".equals(command)) {
+            // set wird im Aufrufer weiterbehandelt, hier kein State-Print
+            return false;
+        } else {
+            System.out.println("ERROR: Unknown command in edit mode: " + command);
+            return false;
+        }
+    }
+
+    private void printError(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null || msg.isBlank()) {
+            return;
+        }
+        if (msg.startsWith("ERROR:")) {
+            System.out.println(msg);
+        } else {
+            System.out.println("ERROR: " + msg);
         }
     }
 
