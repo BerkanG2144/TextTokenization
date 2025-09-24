@@ -1,5 +1,6 @@
 package commands;
 
+import commands.inspect.ExclusionRegistry;
 import core.AnalysisResult;
 import exceptions.CommandException;
 import matching.MatchResult;
@@ -57,15 +58,19 @@ public class ListCommand implements Command {
         List<SimilarityEntry> entries = new ArrayList<>();
         for (MatchResult result : analysisResult.getAllResults()) {
             double value = metric.calculate(result);
-            String formattedValue = metric.format(value);
 
-            // Format: searchText-patternText: value
-            // The search text is the longer sequence (or first text if same length)
-            String searchId = result.getSearchText().identifier();
+            String searchId  = result.getSearchText().identifier();
             String patternId = result.getPatternText().identifier();
-            String line = searchId + "-" + patternId + ": " + formattedValue;
 
-            entries.add(new SimilarityEntry(line, value, searchId, patternId));
+            // ▼ Neu: Exclusion berücksichtigen (Anzeige überschreiben, nicht neu berechnen)
+            boolean excluded = ExclusionRegistry.getInstance().isExcluded(searchId)
+                    || ExclusionRegistry.getInstance().isExcluded(patternId);
+            double shownValue = excluded ? 0.0 : value;
+
+            String formattedValue = metric.format(shownValue);
+
+            String line = searchId + "-" + patternId + ": " + formattedValue;
+            entries.add(new SimilarityEntry(line, shownValue, searchId, patternId));
         }
 
         // Sort entries

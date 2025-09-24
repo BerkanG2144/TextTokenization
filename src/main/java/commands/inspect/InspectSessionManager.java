@@ -35,25 +35,26 @@ public class InspectSessionManager {
      * @param params inspection parameters
      * @param scanner input scanner
      * @param analyzeCommand reference for updating results
+     * @return the exit reason (COMPLETED or USER_ABORT)
      * @throws CommandException for invalid input.
      */
-    public void startInspectSession(MatchResult result, InspectParameters params,
-                                    Scanner scanner, AnalyzeCommand analyzeCommand) throws CommandException {
+    public InspectExitReason startInspectSession(MatchResult result, InspectParameters params,
+                                                 Scanner scanner, AnalyzeCommand analyzeCommand) throws CommandException {
         InspectState state = initializeState(result, params);
 
         if (state.getSortedMatches().isEmpty()) {
             System.out.println("No matches found with minimum length " + params.displayMinLen());
-            return;
+            return InspectExitReason.COMPLETED;
         }
 
         int currentIndex = navigationManager.findFirstUntreatedMatch(
                 state.getSortedMatches(), state.getTreatedMatches());
         if (currentIndex == -1) {
             updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
-            return;
+            return InspectExitReason.COMPLETED;
         }
 
-        runInspectionLoop(result, params, state, currentIndex, scanner, analyzeCommand);
+        return runInspectionLoop(result, params, state, currentIndex, scanner, analyzeCommand);
     }
 
     /**
@@ -69,8 +70,10 @@ public class InspectSessionManager {
         Map<Match, String> decisions = new HashMap<>();
         List<Match> modifiedMatches = new ArrayList<>(originalMatches);
 
-        return new InspectState(sortedMatches, treatedMatches, decisions, modifiedMatches);
+        // params als erstes Argument hinzufügen
+        return new InspectState(params, sortedMatches, treatedMatches, decisions, modifiedMatches);
     }
+
 
     /**
      * Filters matches by minimum length and sorts them.
@@ -110,10 +113,12 @@ public class InspectSessionManager {
 
     /**
      * Runs the main inspection loop.
+     *
+     * @return the exit reason
      */
-    private void runInspectionLoop(MatchResult result, InspectParameters params,
-                                   InspectState state, int startIndex, Scanner scanner,
-                                   AnalyzeCommand analyzeCommand) {
+    private InspectExitReason runInspectionLoop(MatchResult result, InspectParameters params,
+                                                InspectState state, int startIndex, Scanner scanner,
+                                                AnalyzeCommand analyzeCommand) {
         int currentIndex = startIndex;
 
         // Initial anzeigen
@@ -123,7 +128,7 @@ public class InspectSessionManager {
             // Eingabe nur VOR dem Lesen prüfen
             if (!scanner.hasNextLine()) {
                 updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
-                return;
+                return InspectExitReason.COMPLETED;
             }
 
             String input = scanner.nextLine().trim().toUpperCase();
@@ -138,7 +143,7 @@ public class InspectSessionManager {
 
                 if (action.shouldExit()) {
                     updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
-                    return;
+                    return action.getExitReason();
                 }
                 if (action.hasValidIndex()) {
                     currentIndex = action.getNewIndex();
@@ -154,26 +159,26 @@ public class InspectSessionManager {
         }
     }
 
-
-
     /**
      * Handles user input and returns the action to take.
      */
-    private InspectionAction handleUserInput(String command, Match currentMatch, InspectState state, int currentIndex)
+    private InspectionAction handleUserInput(String command, Match currentMatch,
+                                             InspectState state, int currentIndex)
             throws CommandException {
         return switch (command) {
             case "C" -> navigationManager.handleContinueCommand(currentIndex, state);
             case "P" -> navigationManager.handlePreviousCommand(currentIndex, state);
             case "A", "I" -> navigationManager.handleDecisionCommand(command, currentMatch, currentIndex, state);
-            case "X" -> InspectionAction.exitComplete();
-            case "B" -> InspectionAction.exitUser();
+            case "X" -> {
+                ExclusionRegistry.getInstance().exclude(state.getParams().id1()); // ← id1 ausschließen
+                yield InspectionAction.exitComplete();                             // ← completed-Exit
+            }
+            case "B" -> InspectionAction.exitUser();                               // ← user-abort-Exit
             default -> {
                 throw new CommandException("Error: Invalid command. Use C, P, A, I, X, or B.");
             }
         };
     }
-
-
 
     /**
      * Updates the analysis result with modified matches.

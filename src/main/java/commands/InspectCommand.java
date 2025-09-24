@@ -1,6 +1,7 @@
 package commands;
 
 import commands.inspect.InspectArgumentParser;
+import commands.inspect.InspectExitReason;
 import commands.inspect.InspectParameters;
 import commands.inspect.InspectSessionManager;
 import core.AnalysisResult;
@@ -44,8 +45,14 @@ public class InspectCommand implements Command {
         if (result.getMatches().isEmpty()) {
             throw new CommandException("Insufficient matches: need at least 1 but only 0 available");
         }
-        sessionManager.startInspectSession(result, params, scanner, analyzeCommand);
-        return "OK, exit inspection mode";
+
+        InspectExitReason exitReason = sessionManager.startInspectSession(result, params, scanner, analyzeCommand);
+
+        if (exitReason == InspectExitReason.COMPLETED) {
+            return "Inspection complete. Exit inspection mode";
+        } else {
+            return "OK, exit inspection mode";
+        }
     }
 
     /**

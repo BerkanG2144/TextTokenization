@@ -13,6 +13,7 @@ import java.util.Set;
  * @author ujnaa
  */
 public final class InspectState {
+    private final InspectParameters params;      // ← NEU
     private final List<Match> sortedMatches;
     private final Set<Match> treatedMatches;
     private final Map<Match, String> decisions;
@@ -25,9 +26,14 @@ public final class InspectState {
      * @param treatedMatches matches that have been processed
      * @param decisions user decisions for each match
      * @param modifiedMatches working copy of matches for modification
+     * @param params for parameter
      */
-    public InspectState(List<Match> sortedMatches, Set<Match> treatedMatches,
-                        Map<Match, String> decisions, List<Match> modifiedMatches) {
+    public InspectState(InspectParameters params,
+                        List<Match> sortedMatches,
+                        Set<Match> treatedMatches,
+                        Map<Match, String> decisions,
+                        List<Match> modifiedMatches) {
+        this.params = params;                     // ← NEU
         this.sortedMatches = sortedMatches;
         this.treatedMatches = treatedMatches;
         this.decisions = decisions;
@@ -69,4 +75,14 @@ public final class InspectState {
     public List<Match> getModifiedMatches() {
         return modifiedMatches;
     }
+
+    /**
+     * Gets the inspect parameters.
+     *
+     * @return Param
+     */
+    public InspectParameters getParams() {
+        return this.params;
+    }
+
 }
