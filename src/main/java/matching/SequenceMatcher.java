@@ -58,13 +58,8 @@ public class SequenceMatcher {
         List<Match> finalMatches = new ArrayList<>();
         for (Match rawMatch : rawMatches) {
             if (seq1IsSearch) {
-                // sequence1 was search, sequence2 was pattern
-                // rawMatch positions are (searchPos, patternPos) = (seq1Pos, seq2Pos)
                 finalMatches.add(new Match(rawMatch.getStartPosSequence1(), rawMatch.getStartPosSequence2(), rawMatch.getLength()));
             } else {
-                // sequence2 was search, sequence1 was pattern
-                // rawMatch positions are (searchPos, patternPos) = (seq2Pos, seq1Pos)
-                // We want (seq1Pos, seq2Pos), so swap them
                 finalMatches.add(new Match(rawMatch.getStartPosSequence2(), rawMatch.getStartPosSequence1(), rawMatch.getLength()));
             }
         }

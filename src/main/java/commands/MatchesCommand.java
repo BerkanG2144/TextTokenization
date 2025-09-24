@@ -93,24 +93,26 @@ public class MatchesCommand implements Command {
 
             Match match = sortedMatches.get(i);
 
-            // Bestimme Search und Pattern Positionen basierend auf MatchResult
-            int searchPos, patternPos;
+            // Output positions based on command order: id1-id2
+            // id1 is first text in command, id2 is second text in command
+            int pos1, pos2; // positions in id1 and id2 respectively
 
-            if (result.getText1().getIdentifier().equals(result.getSearchText().getIdentifier())) {
-                // text1 ist search text
-                searchPos = match.getStartPosSequence1();
-                patternPos = match.getStartPosSequence2();
+            if (result.getText1().getIdentifier().equals(id1)) {
+                // text1 corresponds to id1, text2 corresponds to id2
+                pos1 = match.getStartPosSequence1();
+                pos2 = match.getStartPosSequence2();
             } else {
-                // text2 ist search text
-                searchPos = match.getStartPosSequence2();
-                patternPos = match.getStartPosSequence1();
+                // text2 corresponds to id1, text1 corresponds to id2
+                pos1 = match.getStartPosSequence2();
+                pos2 = match.getStartPosSequence1();
             }
+
             output.append("Match of length ")
                     .append(match.getLength())
                     .append(": ")
-                    .append(searchPos)
+                    .append(pos1)
                     .append("-")
-                    .append(patternPos);
+                    .append(pos2);
         }
 
         return output.toString();

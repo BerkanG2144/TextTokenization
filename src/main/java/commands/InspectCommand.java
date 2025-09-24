@@ -106,20 +106,35 @@ public class InspectCommand implements Command {
     /**
      * Enters the interactive inspect mode.
      */
+    /**
+     * Enters the interactive inspect mode.
+     */
+    /**
+     * Enters the interactive inspect mode.
+     */
     private void enterInspectMode(MatchResult result, String id1, String id2, int contextSize, int displayMinLenArg) {
-        // Primary threshold: entweder explizit übergeben oder mindestens 2 bzw. MinMatchLen des Ergebnisses
-        int primaryMinLen = (displayMinLenArg > 0)
-                ? displayMinLenArg
-                : Math.max(2, result.getMinMatchLength());
-        int secondaryMinLen = 1; // Fallback, wenn längere aufgebraucht sind
-        boolean usePrimary = true;
+        // Determine the minimum length for display
+        int displayMinLen = (displayMinLenArg > 0) ? displayMinLenArg : 1; // Default to 1 if not specified
 
         List<Match> originalMatches = result.getMatches();
 
         // Sort matches by position in "first text of the command order", tie-breaker: longer first
-        List<Match> sortedMatches = new ArrayList<>(originalMatches);
+        List<Match> sortedMatches = new ArrayList<>();
         boolean needSwap = !result.getText1().getIdentifier().equals(id1);
 
+        // Filter matches by display minimum length
+        for (Match match : originalMatches) {
+            if (match.getLength() >= displayMinLen) {
+                sortedMatches.add(match);
+            }
+        }
+
+        if (sortedMatches.isEmpty()) {
+            System.out.println("No matches found with minimum length " + displayMinLen);
+            return;
+        }
+
+        // Sort by position in first text (as specified in command), then by length descending
         if (needSwap) {
             sortedMatches.sort((m1, m2) -> {
                 int c = Integer.compare(m1.getStartPosSequence2(), m2.getStartPosSequence2());
@@ -140,33 +155,22 @@ public class InspectCommand implements Command {
         Map<Match, String> decisions = new HashMap<>();
         List<Match> modifiedMatches = new ArrayList<>(originalMatches);
 
-        int currentIndex = 0;
+        // Find first untreated match
+        int currentIndex = -1;
+        for (int i = 0; i < sortedMatches.size(); i++) {
+            if (!treatedMatches.contains(sortedMatches.get(i))) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex == -1) {
+            System.out.println("All matches have been treated. Inspection complete.");
+            updateAnalysisResult(result, modifiedMatches, id1, id2);
+            return;
+        }
 
         while (true) {
-            // Initial/aktueller Kandidat: nächstes unbehandeltes & displaybares Match (mit möglichem Fallback)
-            int base = (currentIndex - 1 + sortedMatches.size()) % sortedMatches.size();
-            int next = findNextUntreated(base, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
-            if (next == -1) {
-                if (usePrimary) {
-                    int anyShorter = findNextUntreated(base, sortedMatches, treatedMatches, secondaryMinLen);
-                    if (anyShorter != -1) {
-                        System.out.println("(No more matches ≥" + primaryMinLen + ". Switching to shorter matches.)");
-                        usePrimary = false;
-                        currentIndex = anyShorter;
-                    } else {
-                        System.out.println("Inspection complete. Exit inspection mode");
-                        updateAnalysisResult(result, modifiedMatches, id1, id2);
-                        return;
-                    }
-                } else {
-                    System.out.println("Inspection complete. Exit inspection mode");
-                    updateAnalysisResult(result, modifiedMatches, id1, id2);
-                    return;
-                }
-            } else {
-                currentIndex = next;
-            }
-
             Match currentMatch = sortedMatches.get(currentIndex);
             displayMatch(currentMatch, result, id1, id2, contextSize, decisions);
 
@@ -177,68 +181,47 @@ public class InspectCommand implements Command {
 
             switch (input) {
                 case "C": {
-                    int n = findNextUntreated(currentIndex, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
-                    if (n == -1) {
-                        if (usePrimary) {
-                            int anyShorter = findNextUntreated(currentIndex, sortedMatches, treatedMatches, secondaryMinLen);
-                            if (anyShorter != -1) {
-                                System.out.println("(No more matches ≥" + primaryMinLen + ". Switching to shorter matches.)");
-                                usePrimary = false;
-                                currentIndex = anyShorter;
-                                break;
-                            }
-                        }
+                    // Find next untreated match
+                    int nextIndex = findNextUntreatedSimple(currentIndex, sortedMatches, treatedMatches);
+                    if (nextIndex == -1) {
                         System.out.println("No more untreated matches. Inspection done.");
                         updateAnalysisResult(result, modifiedMatches, id1, id2);
                         return;
                     }
-                    currentIndex = n;
+                    currentIndex = nextIndex;
                     break;
                 }
                 case "P": {
-                    int p = findPrevUntreated(currentIndex, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
-                    if (p == -1) {
-                        if (usePrimary) {
-                            int anyShorter = findPrevUntreated(currentIndex, sortedMatches, treatedMatches, secondaryMinLen);
-                            if (anyShorter != -1) {
-                                System.out.println("(No more matches ≥" + primaryMinLen + " backwards. Switching to shorter matches.)");
-                                usePrimary = false;
-                                currentIndex = anyShorter;
-                                break;
-                            }
-                        }
-                        System.out.println("No more untreated matches. Inspection done.");
-                        updateAnalysisResult(result, modifiedMatches, id1, id2);
-                        return;
+                    // Find previous untreated match
+                    int prevIndex = findPrevUntreatedSimple(currentIndex, sortedMatches, treatedMatches);
+                    if (prevIndex == -1) {
+                        System.out.println("No previous untreated matches.");
+                    } else {
+                        currentIndex = prevIndex;
                     }
-                    currentIndex = p;
                     break;
                 }
                 case "A":
                 case "I":
                 case "X": {
-                    decisions.put(currentMatch, input.equals("A") ? "Accept" : input.equals("I") ? "Ignore" : "Exclude");
+                    // Mark as treated and update decision
+                    String decision = input.equals("A") ? "Accept" : input.equals("I") ? "Ignore" : "Exclude";
+                    decisions.put(currentMatch, decision);
                     treatedMatches.add(currentMatch);
+
+                    // Remove from modified matches if not accepted
                     if (!input.equals("A")) {
-                        // lokal entfernen
                         modifiedMatches.removeIf(m -> m.equals(currentMatch));
                     }
-                    int n = findNextUntreated(currentIndex, sortedMatches, treatedMatches, usePrimary ? primaryMinLen : secondaryMinLen);
-                    if (n == -1 && usePrimary) {
-                        int anyShorter = findNextUntreated(currentIndex, sortedMatches, treatedMatches, secondaryMinLen);
-                        if (anyShorter != -1) {
-                            System.out.println("(No more matches ≥" + primaryMinLen + ". Switching to shorter matches.)");
-                            usePrimary = false;
-                            currentIndex = anyShorter;
-                            break;
-                        }
-                    }
-                    if (n == -1) {
+
+                    // Find next untreated match
+                    int nextIndex = findNextUntreatedSimple(currentIndex, sortedMatches, treatedMatches);
+                    if (nextIndex == -1) {
                         System.out.println("No more untreated matches. Inspection done.");
                         updateAnalysisResult(result, modifiedMatches, id1, id2);
                         return;
                     }
-                    currentIndex = n;
+                    currentIndex = nextIndex;
                     break;
                 }
                 case "B":
@@ -250,6 +233,33 @@ public class InspectCommand implements Command {
         }
     }
 
+    /**
+     * Simple helper to find next untreated match (no wraparound).
+     */
+    private int findNextUntreatedSimple(int currentIndex, List<Match> matches, Set<Match> treated) {
+        for (int i = currentIndex + 1; i < matches.size(); i++) {
+            if (!treated.contains(matches.get(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Simple helper to find previous untreated match.
+     */
+    private int findPrevUntreatedSimple(int currentIndex, List<Match> matches, Set<Match> treated) {
+        for (int i = currentIndex - 1; i >= 0; i--) {
+            if (!treated.contains(matches.get(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Displays the current match with context.
+     */
     /**
      * Displays the current match with context.
      */
@@ -281,14 +291,39 @@ public class InspectCommand implements Command {
             String context1 = extractContext(firstText, startChar1, endChar1, contextSize);
             String context2 = extractContext(secondText, startChar2, endChar2, contextSize);
 
-            // Calculate actual match length in characters
-            int matchLength1 = endChar1 - startChar1;
-            int matchLength2 = endChar2 - startChar2;
-
             System.out.println(context1);
-            System.out.println("^".repeat(Math.max(1, matchLength1)));
+
+            // Calculate the position and length of the matched part within the context
+            String matchedPart1 = firstText.substring(startChar1, endChar1);
+            String matchedPart2 = secondText.substring(startChar2, endChar2);
+
+            // Find the matched part in the context (accounting for "..." prefix)
+            int contextStart1 = Math.max(0, startChar1 - contextSize);
+            int contextStart2 = Math.max(0, startChar2 - contextSize);
+
+            int prefixLength1 = (contextStart1 > 0) ? 3 : 0; // Length of "..."
+            int prefixLength2 = (contextStart2 > 0) ? 3 : 0;
+
+            int matchStartInContext1 = prefixLength1 + (startChar1 - contextStart1);
+            int matchStartInContext2 = prefixLength2 + (startChar2 - contextStart2);
+
+            // Print underline for first match
+            StringBuilder underline1 = new StringBuilder();
+            for (int i = 0; i < matchStartInContext1; i++) {
+                underline1.append(" ");
+            }
+            underline1.append("^".repeat(matchedPart1.length()));
+            System.out.println(underline1.toString());
+
             System.out.println(context2);
-            System.out.println("^".repeat(Math.max(1, matchLength2)));
+
+            // Print underline for second match
+            StringBuilder underline2 = new StringBuilder();
+            for (int i = 0; i < matchStartInContext2; i++) {
+                underline2.append(" ");
+            }
+            underline2.append("^".repeat(matchedPart2.length()));
+            System.out.println(underline2.toString());
         }
 
         // Display current decision
@@ -297,37 +332,6 @@ public class InspectCommand implements Command {
         System.out.println();
         System.out.println("[C]ontinue, [P]revious, [A]ccept, [I]gnore, e[X]clude, [B]ack? (C)");
     }
-
-    /* ---- Finder mit Längenfilter + Wrap ---- */
-
-    private int findNextUntreated(int startExclusive, List<Match> matches, Set<Match> treated, int minLen) {
-        int n = matches.size();
-        if (n == 0) return -1;
-        int i = (startExclusive + 1) % n;
-        while (i != startExclusive) {
-            Match m = matches.get(i);
-            if (!treated.contains(m) && isDisplayable(m, minLen)) return i;
-            i = (i + 1) % n;
-        }
-        Match m0 = matches.get(startExclusive);
-        if (!treated.contains(m0) && isDisplayable(m0, minLen)) return startExclusive;
-        return -1;
-    }
-
-    private int findPrevUntreated(int startExclusive, List<Match> matches, Set<Match> treated, int minLen) {
-        int n = matches.size();
-        if (n == 0) return -1;
-        int i = (startExclusive - 1 + n) % n;
-        while (i != startExclusive) {
-            Match m = matches.get(i);
-            if (!treated.contains(m) && isDisplayable(m, minLen)) return i;
-            i = (i - 1 + n) % n;
-        }
-        Match m0 = matches.get(startExclusive);
-        if (!treated.contains(m0) && isDisplayable(m0, minLen)) return startExclusive;
-        return -1;
-    }
-
     /**
      * Extracts context around a match.
      */
