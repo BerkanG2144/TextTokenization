@@ -1,6 +1,7 @@
-package commands.inspect.display;
+package src.commands.inspect.display;
 
 import commands.inspect.InspectParameters;
+import commands.inspect.display.MatchContextData;
 import core.Match;
 import core.Token;
 import matching.MatchResult;
@@ -36,8 +37,8 @@ public class InspectDisplayManager {
         int firstPos = needSwap ? match.startPosSequence2() : match.startPosSequence1();
         int secondPos = needSwap ? match.startPosSequence1() : match.startPosSequence2();
 
-        MatchContextData.PositionPair positions = new MatchContextData.PositionPair(firstPos, secondPos);
-        MatchContextData contextData = new MatchContextData(
+        commands.inspect.display.MatchContextData.PositionPair positions = new commands.inspect.display.MatchContextData.PositionPair(firstPos, secondPos);
+        commands.inspect.display.MatchContextData contextData = new commands.inspect.display.MatchContextData(
                 match, firstText, secondText, firstSeq, secondSeq, positions, params.contextSize());
 
         displayMatchContext(contextData);

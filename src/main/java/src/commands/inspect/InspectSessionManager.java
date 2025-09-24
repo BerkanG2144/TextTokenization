@@ -1,6 +1,12 @@
-package commands.inspect;
+package src.commands.inspect;
 
 import commands.AnalyzeCommand;
+import commands.inspect.*;
+import commands.inspect.ExclusionRegistry;
+import commands.inspect.InspectExitReason;
+import commands.inspect.InspectParameters;
+import commands.inspect.InspectState;
+import commands.inspect.InspectionAction;
 import commands.inspect.display.InspectDisplayManager;
 import commands.inspect.navigation.InspectNavigationManager;
 import core.Match;
@@ -44,13 +50,13 @@ public class InspectSessionManager {
      * @return the exit reason (COMPLETED or USER_ABORT)
      * @throws CommandException for invalid input.
      */
-    public InspectExitReason startInspectSession(MatchResult result, InspectParameters params,
-                                                 Scanner scanner, AnalyzeCommand analyzeCommand) throws CommandException {
-        InspectState state = initializeState(result, params);
+    public commands.inspect.InspectExitReason startInspectSession(MatchResult result, InspectParameters params,
+                                                                  Scanner scanner, AnalyzeCommand analyzeCommand) throws CommandException {
+        commands.inspect.InspectState state = initializeState(result, params);
 
         if (state.getSortedMatches().isEmpty()) {
             System.out.println("No matches found with minimum length " + params.displayMinLen());
-            return InspectExitReason.COMPLETED;
+            return commands.inspect.InspectExitReason.COMPLETED;
         }
 
         int currentIndex = 0;  // Immer das erste Match in der sortierten Liste
@@ -58,7 +64,7 @@ public class InspectSessionManager {
         // Überprüfe, ob überhaupt Matches vorhanden sind
         if (currentIndex >= state.getSortedMatches().size()) {
             updateAnalysisResult(result, state.getModifiedMatches(), params, analyzeCommand);
-            return InspectExitReason.COMPLETED;
+            return commands.inspect.InspectExitReason.COMPLETED;
         }
 
         return runInspectionLoop(result, params, state, currentIndex, scanner, analyzeCommand);
@@ -67,7 +73,7 @@ public class InspectSessionManager {
     /**
      * Initializes the inspection state.
      */
-    private InspectState initializeState(MatchResult result, InspectParameters params) {
+    private commands.inspect.InspectState initializeState(MatchResult result, InspectParameters params) {
         List<Match> originalMatches = result.getMatches();
         List<Match> sortedMatches = filterAndSortMatches(originalMatches, result, params);
 
@@ -79,7 +85,7 @@ public class InspectSessionManager {
 
         List<Match> modifiedMatches = new ArrayList<>(originalMatches);
 
-        return new InspectState(params, sortedMatches, treatedMatches, decisions, modifiedMatches, result);
+        return new commands.inspect.InspectState(params, sortedMatches, treatedMatches, decisions, modifiedMatches, result);
     }
 
     /**
@@ -123,9 +129,9 @@ public class InspectSessionManager {
      *
      * @return the exit reason
      */
-    private InspectExitReason runInspectionLoop(MatchResult result, InspectParameters params,
-                                                InspectState state, int startIndex, Scanner scanner,
-                                                AnalyzeCommand analyzeCommand) {
+    private commands.inspect.InspectExitReason runInspectionLoop(MatchResult result, InspectParameters params,
+                                                                 commands.inspect.InspectState state, int startIndex, Scanner scanner,
+                                                                 AnalyzeCommand analyzeCommand) {
         int currentIndex = startIndex;
 
         // Initial display
@@ -145,7 +151,7 @@ public class InspectSessionManager {
             String command = input.split("\\s+")[0];
 
             try {
-                InspectionAction action = handleUserInput(
+                commands.inspect.InspectionAction action = handleUserInput(
                         command,
                         state.getSortedMatches().get(currentIndex),
                         state,
@@ -177,20 +183,20 @@ public class InspectSessionManager {
     /**
      * Handles user input and returns the action to take.
      */
-    private InspectionAction handleUserInput(String command, Match currentMatch,
-                                             InspectState state, int currentIndex,
-                                             MatchResult result)
+    private commands.inspect.InspectionAction handleUserInput(String command, Match currentMatch,
+                                                              InspectState state, int currentIndex,
+                                                              MatchResult result)
             throws CommandException {
         return switch (command) {
             case "C" -> navigationManager.handleContinueCommand(currentIndex, state);
             case "P" -> navigationManager.handlePreviousCommand(currentIndex, state);
             case "A", "I" -> navigationManager.handleDecisionCommand(command, currentMatch, currentIndex, state);
             case "X" -> {
-                ExclusionRegistry reg = ExclusionRegistry.getInstance();
+                commands.inspect.ExclusionRegistry reg = ExclusionRegistry.getInstance();
 
                 if (state.getDecisions().isEmpty()) {
                     reg.exclude(state.getParams().id1());      // globale Dokument-ID
-                    yield InspectionAction.exitComplete();    // nur eine Abschlusszeile
+                    yield commands.inspect.InspectionAction.exitComplete();    // nur eine Abschlusszeile
                 }
 
                 String k1 = buildKeyForSeq1(currentMatch, result);
